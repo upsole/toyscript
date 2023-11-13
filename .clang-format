@@ -1,0 +1,6 @@
+UseTab: Always
+IndentWidth: 8
+IndentCaseLabels: true
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: WithoutElse

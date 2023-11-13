@@ -1,0 +1,9 @@
+TODO
+tags
+*.out
+.project.vimrc
+toyscript
+test_toyscript
+playground
+main.c
+local.sh
