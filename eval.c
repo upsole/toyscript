@@ -53,9 +53,10 @@ String identlist_string(Arena *a, IdentList *list);
 String stmtlist_string(Arena *a, StmtList *list);
 static String stringer_fn(Arena *a, Element el)
 {
-	return str_concatv(a, 5, str("["), identlist_string(a, el._fn.params),
-			   str("]->"), stmtlist_string(a, el._fn.body),
-			   str(")"));
+	return str_concatv(
+	    a, 4, str("["), identlist_string(a, el._fn.params), str("]->"),
+	    stmtlist_string(
+		a, el._fn.body)); // FIXME this somehow writes to stdin  in repl
 }
 
 static String stringer_default(Arena *a, Element el)
@@ -216,8 +217,7 @@ Element eval_expression(Environment *env, Expression ex)
 			return (Element){.type = ELE_FUNCTION,
 					 ._fn = {.body = body,
 						 .params = params,
-						 .namespace = env->namespace},
-					 .string = stringer_fn};
+						 .namespace = env->namespace}};
 		}
 		case EXP_CALL: {
 			Element fn = eval_expression(env, *ex._call.function);
