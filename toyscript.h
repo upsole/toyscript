@@ -146,7 +146,7 @@ struct Expression {
 		struct ConditionalExp {
 			Token tok;
 			Expression *condition;
-			BlockStatement *consequence; // TODO use stmt list
+			BlockStatement *consequence;
 			BlockStatement *alternative;
 		} _conditional;
 	};

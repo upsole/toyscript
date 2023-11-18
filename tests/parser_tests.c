@@ -51,7 +51,7 @@ int main(int ac, char **av)
 }
 
 static i64 get_val(Expression ex);
-void parse_stmt_tests(Arena *a) // TODO statement tests
+void parse_stmt_tests(Arena *a)
 {
 	// val statements
 	// return statements

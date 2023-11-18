@@ -147,39 +147,32 @@ Statement parse_statement(Parser *p)
 	}
 }
 
-Statement parse_val_stmt(Parser *p) // TODO refactor returns
+Statement parse_val_stmt(Parser *p)
 {
 	ValStatement v = {0};
-	Statement s = {0};
 
 	v.tok = p->cur_token;
-	if (!expect_peek(p, IDENT)) return (s.type = STMT_ERR, s);
+	if (!expect_peek(p, IDENT)) return (Statement){.type = STMT_ERR};
 	v.name = (Identifier){.tok = p->cur_token, .value = p->cur_token.lit};
-
-	if (!expect_peek(p, ASSIGN)) return (s.type = STMT_ERR, s);
+	if (!expect_peek(p, ASSIGN)) return (Statement){.type = STMT_ERR};
 	parse_next_tok(p);
 	v.value = parse_expression(p, LOWEST);
 	if (v.value.type == EXP_ERROR) return (Statement){.type = STMT_ERR};
-	s._val = v;
-	s.type = STMT_VAL;
 	if (p->peek_token.type == SEMICOLON) parse_next_tok(p);
-	return s;
+	return (Statement){._val = v, .type = STMT_VAL};
 }
 
-Statement parse_return_stmt(Parser *p) // TODO refactor return
+Statement parse_return_stmt(Parser *p)
 {
 	ReturnStatement r = {0};
-	Statement s = {0};
 
 	r.tok = p->cur_token;
 	parse_next_tok(p);
 
 	r.value = parse_expression(p, LOWEST);
 	if (r.value.type == EXP_ERROR) return (Statement){.type = STMT_ERR};
-	s._return = r;
-	s.type = STMT_RET;
 	if (p->peek_token.type == SEMICOLON) parse_next_tok(p);
-	return s;
+	return (Statement){._return = r, .type = STMT_RET};
 }
 
 Statement parse_expression_stmt(Parser *p)

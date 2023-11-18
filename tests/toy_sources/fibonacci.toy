@@ -1,0 +1,16 @@
+val fibo = fn(x) {
+	if (x < 2) {
+		return x;
+	}
+	return fibo(x - 1) + fibo(x - 2);
+}
+
+fn (x) {
+	val recur = fn(i){
+		print(fibo(i));
+		if (i < x) {
+			recur(i + 1);
+		}
+	};
+	recur(0);
+}(15);
