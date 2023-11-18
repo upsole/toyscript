@@ -1,5 +1,6 @@
 #include "toyscript.h"
 #include <stdarg.h>
+#include <sys/mman.h>
 #include <unistd.h>
 // It's over
 void panic(char *lit)
@@ -10,27 +11,25 @@ void panic(char *lit)
 // MEMORY
 Arena *arena_init(u64 cap)
 {
-	Arena *a = malloc(sizeof(Arena));
-	void *buf = malloc(cap);
+	void *buf = mmap(0, cap, PROT_READ | PROT_WRITE,
+			 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	Arena *a = buf;
 	a->cap = cap;
-	a->used = 0;
+	a->used += sizeof(Arena);
+	;
 	a->buf = buf;
 	return a;
 }
 
 void arena_reset(Arena *a)
 {
-	memset(a->buf, 0, a->used);
-	a->used = 0;
+	memset(a->buf + sizeof(Arena), 0, a->used);
+	a->used = sizeof(Arena);
 }
 
 void arena_free(Arena **a)
 {
-	(*a)->used = 0;
-	(*a)->cap = 0;
-	free((*a)->buf);
-	(*a)->buf = NULL;
-	free(*a);
+	munmap((*a)->buf, (*a)->used);
 	(*a) = NULL;
 }
 
