@@ -15,7 +15,6 @@ typedef enum ElemType {
 	ELE_BOOL,
 	ELE_LIST,
 	ELE_RETURN,
-	ELE_VAL,
 	ELE_FUNCTION,
 	ELE_BUILTIN
 } ElemType;
@@ -31,6 +30,9 @@ struct Element {
 	union {
 		struct Null {
 		} _null;
+		struct Error {
+			String msg;
+		} _error;
 		struct Integer {
 			i64 value;
 		} _int;
@@ -46,9 +48,6 @@ struct Element {
 		struct Return {
 			Element *value;
 		} _return;
-		struct Error {
-			String msg;
-		} _error;
 		struct Function {
 			IdentList *params;
 			StmtList *body;

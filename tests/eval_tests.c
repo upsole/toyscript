@@ -460,13 +460,17 @@ TestResult test_function_call(Arena *a)
 
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
-		if (res.type != ELE_INT)
+		if (res.type != ELE_INT) {
+			str_print(str("\n"));
+			element_print(a, res);
+			/* str_print(res.string(a, res)); */
 			return (TestResult){
 			    false,
 			    str_concatv(a, 5, str("Got type: "),
 					type_str(res.type),
 					str("\nExpected ELE_INT"),
 					str("\nInput: "), tests[i].input)};
+		}
 		if (res._int.value != tests[i].expected)
 			return (TestResult){
 			    false,

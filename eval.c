@@ -227,7 +227,7 @@ Element eval_expression(Environment *env, Expression ex)
 						 ? fn._fn.namespace
 						 : env->namespace};
 			ElemList *args =
-			    eval_expressions(&f_env, ex._call.arguments);
+			    eval_expressions(env, ex._call.arguments);
 			if (args->len == 1 && args->head->el.type == ELE_ERR) {
 				return args->head->el;
 			}

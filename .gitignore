@@ -7,3 +7,4 @@ test_toyscript
 playground
 main.c
 local.sh
+.gdbinit
