@@ -13,6 +13,7 @@ TestResult test_val_eval(Arena *a);
 TestResult test_function_eval(Arena *a);
 TestResult test_function_call(Arena *a);
 TestResult test_builtin_function(Arena *a);
+
 int main(int ac, char **av)
 {
 	Arena *arena = arena_init(MB(1));
@@ -484,15 +485,19 @@ TestResult test_function_call(Arena *a)
 	return pass();
 }
 
+ElemList *elemlist(Arena *a);
+void elem_push(ElemList *l, Element el);
+void element_print(Arena *a, Element el);
 TestResult test_builtin_function(Arena *a)
 {
-	struct test {
+	struct test_int {
 		String input;
 		i64 expected;
 	};
-	struct test tests[] = {{str("len(\"\")"), 0},
-			       {str("len(\"ola\")"), 3},
-			       {str("len(\"ola ola\")"), 7}};
+	struct test_int tests[] = {{str("len(\"\")"), 0},
+				   {str("len(\"ola\")"), 3},
+				   {str("len(\"ola ola\")"), 7},
+				   {str("car([10,3,1])"), 10}};
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
 		if (res.type != ELE_INT)
@@ -511,6 +516,54 @@ TestResult test_builtin_function(Arena *a)
 					"Value mismatch: got %ld expected %ld",
 					res._int.value, tests[i].expected),
 				str("\nInput: "), tests[i].input)};
+	}
+
+	struct test_elem {
+		String input;
+		Element expected;
+	};
+	ElemList *count5_list = elemlist(a);
+	for (int i = 0; i < 5; i++)
+		elem_push(count5_list,
+			  (Element){.type = ELE_LIST, ._int.value = i});
+	struct test_elem elem_tests[] = {
+	    {str("push([0,1,2,3], 4)"),
+	     {.type = ELE_LIST, ._list.items = count5_list}},
+	    {str("cons([0,1], [2,3])"),
+	     {.type = ELE_LIST, ._list.items = count5_list}},
+	    {str("last([0, 1, 2, 3, 4])"), {.type = ELE_INT, ._int.value = 4}}};
+	for (int i = 0; i < arrlen(elem_tests); i++) {
+		Element res = eval_wrapper(a, elem_tests[i].input);
+		if (res.type != elem_tests[i].expected.type)
+			return (TestResult){false, str("Actual is not a list")};
+		if (res.type == ELE_INT) {
+			if (res._int.value != elem_tests[i].expected._int.value)
+				return (TestResult){
+				    false,
+				    str_concatv(
+					a, 3,
+					str_fmt(
+					    a,
+					    "Value mismatch: got %ld expected "
+					    "%ld",
+					    res._int.value,
+					    elem_tests[i].expected._int.value),
+					str("\nInput: "), tests[i].input)};
+		}
+		if (res.type == ELE_LIST) {
+			for (ElemNode *
+				 actual = res._list.items->head,
+				*exp = elem_tests[i].expected._list.items->head;
+			     (actual && exp);
+			     actual = actual->next, exp = exp->next) {
+				if (actual->el._int.value != exp->el._int.value)
+					return (TestResult){
+					    false,
+					    str_fmt(a, "Got %d, expected %d\n",
+						    actual->el._int.value,
+						    exp->el._int.value)};
+			}
+		}
 	}
 	return pass();
 }
