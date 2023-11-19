@@ -613,6 +613,14 @@ Element *alloc_element(Arena *a, Element el)
 		case ELE_BOOL:
 			ptr->_bool.value = el._bool.value;
 			return ptr;
+		case ELE_LIST:
+			ptr->_list.items = el._list.items;
+			return ptr;
+		case ELE_STR:
+			ptr->_string.value = el._string.value;
+			return ptr;
+		case ELE_FUNCTION:
+			ptr->_fn = el._fn;
 		default:
 			return NULL;
 	}
