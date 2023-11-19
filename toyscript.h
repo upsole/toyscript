@@ -116,8 +116,7 @@ struct Expression {
 		struct ListLiteral {
 			Token tok;
 			ExpList *items;
-		} _list; // TODO complete functional interfaces (push,
-			 // first/last, tail...)
+		} _list;
 		struct StringLiteral {
 			Token tok;
 			String value;

@@ -31,7 +31,7 @@ static String stringer_list(Arena *a, Element el)
 	buf[0] = '[';
 	u64 len = 1;
 	for (ElemNode *cursor = list->head; cursor; cursor = cursor->next) {
-		String tmp = cursor->el.string(a, cursor->el);
+		String tmp = element_str(a, cursor->el);
 		arena_alloc(a, tmp.len);
 		memcpy(buf + len, tmp.buf, tmp.len);
 		len += tmp.len;
@@ -86,6 +86,8 @@ static String stringer_default(Arena *a, Element el)
 static Element error(String msg);
 Element *alloc_element(Arena *a, Element el);
 
+// Builtins
+
 Element builtin_print(Arena *a, void *ptr)
 {
 	ElemList *args = ptr;
@@ -95,7 +97,7 @@ Element builtin_print(Arena *a, void *ptr)
 	str_print(str("\n"));
 	return NULL_ELEM;
 }
-// Builtins
+
 Element builtin_len(Arena *a, void *ptr)
 {
 	ElemList *args = ptr;
@@ -115,6 +117,104 @@ Element builtin_len(Arena *a, void *ptr)
 	    str_concat(a, str("Type error: len called with arg of type: "),
 		       type_str(arg.type)));
 }
+
+ElemList *elemlist(Arena *a);
+void elem_push(ElemList *l, Element el);
+ElemList *elemlist_single(Arena *a, Element el);
+Element builtin_push(Arena *a, void *ptr)
+{
+	ElemList *args = ptr;
+	if (args->len != 2) {
+		return error(str_fmt(a,
+				     "Wrong number of args for len (%lu), "
+				     "expected 2 (list and new element)",
+				     args->len));
+	}
+	Element arg_list = args->head->el;
+	if (arg_list.type != ELE_LIST)
+		return error(str("First argument must be of type list"));
+	Element arg_elem = args->head->next->el;
+	elem_push(arg_list._list.items, arg_elem);
+	return (Element){.type = ELE_LIST, ._list.items = arg_list._list.items};
+}
+
+Element builtin_car(Arena *a, void *ptr)
+{
+	ElemList *args = ptr;
+	if (args->len != 1) {
+		return error(str_fmt(
+		    a, "Wrong number of args for len (%lu), expected 2 (list)",
+		    args->len));
+	}
+	Element arg_list = args->head->el;
+	if (arg_list.type != ELE_LIST)
+		return error(str("First argument must be of type list"));
+	return arg_list._list.items->head->el;
+}
+
+ElemNode *last_elem(ElemList *l);
+Element builtin_cdr(Arena *a, void *ptr)
+{
+	ElemList *args = ptr;
+	if (args->len != 1) {
+		return error(str_fmt(
+		    a, "Wrong number of args for len (%lu), expected 2 (list)",
+		    args->len));
+	}
+	Element arg_list = args->head->el;
+	if (arg_list.type != ELE_LIST)
+		return error(str("First argument must be of type list"));
+	ElemNode *cdr = arg_list._list.items->head;
+	if (!cdr) return NULL_ELEM;
+	cdr = cdr->next;
+	if (!cdr) return NULL_ELEM;
+	ElemList *l = arena_alloc(a, sizeof(ElemList)); // XXX rethink this
+	l->len = (arg_list._list.items->len == 0)
+		     ? 0
+		     : arg_list._list.items->len - 1;
+	l->head = cdr;
+	return (Element){.type = ELE_LIST, ._list.items = l};
+}
+
+Element builtin_cons(Arena *a, void *ptr)
+{
+	ElemList *args = ptr;
+	if (args->len != 2) {
+		return error(str_fmt(a,
+				     "Wrong number of args for len (%lu), "
+				     "expected 2 (list, elem)",
+				     args->len));
+	}
+	Element first = args->head->el;
+	if (first.type != ELE_LIST) // XXX good place to get tuples
+		return error(str("First argument must be of type list"));
+	Element second = args->head->next->el;
+	if (second.type == ELE_NULL) return first;
+	if (second.type == ELE_LIST) {
+		last_elem(first._list.items)->next = second._list.items->head;
+		first._list.items->len += second._list.items->len;
+		return first;
+	}
+	elem_push(first._list.items, second); // XXX see above; implement tuples
+	return (Element){.type = ELE_LIST, ._list.items = first._list.items};
+}
+
+Element builtin_last(Arena *a, void *ptr)
+{
+	ElemList *args = ptr;
+	if (args->len != 1) {
+		return error(str_fmt(
+		    a, "Wrong number of args for len (%lu), expected 1 (list)",
+		    args->len));
+	}
+	Element list = args->head->el;
+	if (list.type != ELE_LIST)
+		return error(str("First argument must be of type list"));
+	ElemNode *last = last_elem(list._list.items);
+	if (!last) return NULL_ELEM;
+	return last->el;
+}
+
 Element builtins(String fn_name)
 {
 	if (str_eq(fn_name, str("len")))
@@ -123,7 +223,21 @@ Element builtins(String fn_name)
 	if (str_eq(fn_name, str("print")))
 		return (Element){.type = ELE_BUILTIN,
 				 ._builtin.fn = &builtin_print};
-
+	if (str_eq(fn_name, str("push")))
+		return (Element){.type = ELE_BUILTIN,
+				 ._builtin.fn = &builtin_push};
+	if (str_eq(fn_name, str("car")))
+		return (Element){.type = ELE_BUILTIN,
+				 ._builtin.fn = &builtin_car};
+	if (str_eq(fn_name, str("cdr")))
+		return (Element){.type = ELE_BUILTIN,
+				 ._builtin.fn = &builtin_cdr};
+	if (str_eq(fn_name, str("last")))
+		return (Element){.type = ELE_BUILTIN,
+				 ._builtin.fn = &builtin_last};
+	if (str_eq(fn_name, str("cons")))
+		return (Element){.type = ELE_BUILTIN,
+				 ._builtin.fn = &builtin_cons};
 	return error(str("No builtin function found"));
 }
 
@@ -242,10 +356,11 @@ Element eval_call_function(Environment *env, Element function, ElemList *args)
 {
 	if (function.type == ELE_FUNCTION) {
 		if (function._fn.params->len != args->len) {
-			return error(str_fmt(
-			    env->arena,
-			    "Invalid number of params got %lu, expected %lu",
-			    args->len, function._fn.params->len));
+			return error(str_fmt(env->arena,
+					     "Invalid number of params "
+					     "got %lu, expected %lu",
+					     args->len,
+					     function._fn.params->len));
 		}
 
 		Namespace *fn_ns =
@@ -290,16 +405,13 @@ Element eval_statements(Environment *env, StmtList *list)
 	for (StmtNode *cursor = list->head; cursor; cursor = cursor->next) {
 		res = eval(env, cursor->s);
 		if (res.type == ELE_RETURN)
-			return res; // Return without "unwrapping" so it does
-				    // end the program even in a nested block
+			return res; // Return without "unwrapping" so it
+				    // does end the program even in a
+				    // nested block
 		if (res.type == ELE_ERR) return res;
 	}
 	return res;
 }
-
-ElemList *elemlist(Arena *a);
-void elem_push(ElemList *l, Element el);
-ElemList *elemlist_single(Arena *a, Element el);
 
 ElemList *eval_expressions(Environment *env, ExpList *exps)
 {
@@ -601,6 +713,12 @@ void element_print(Arena *a, Element el)
 	arena_temp_reset(tmp);
 }
 
+String element_str(Arena *a, Element el)
+{
+	if (!el.string) return stringer_default(a, el);
+	return el.string(a, el);
+}
+
 void element_aprint(Element el)
 {
 	Arena *a = arena_init(KB(1));
@@ -638,6 +756,16 @@ void elem_push(ElemList *l, Element el)
 	l->tail = node;
 	l->len++;
 }
+
+ElemNode *last_elem(ElemList *l)
+{
+	ElemNode *cursor = l->head;
+	if (!cursor) return NULL;
+	while (cursor->next)
+		cursor = cursor->next;
+	return cursor;
+}
+
 ElemList *elemlist_single(Arena *a, Element el)
 {
 	ElemList *l = elemlist(a);

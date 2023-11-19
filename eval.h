@@ -87,6 +87,7 @@ typedef struct Environment {
 
 void element_print(Arena *a, Element el);
 void element_aprint(Element el);
+String element_str(Arena *a, Element el);
 Element eval(Environment *a, Statement s);
 
 // List
