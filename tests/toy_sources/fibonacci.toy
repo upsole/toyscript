@@ -1,13 +1,13 @@
-val fibo = fn(x) {
+val fibonacci = fn(x) {
 	if (x < 2) {
 		return x;
 	}
-	return fibo(x - 1) + fibo(x - 2);
+	return fibonacci(x - 1) + fibonacci(x - 2);
 }
 
 fn (x) {
 	val recur = fn(i){
-		print(fibo(i));
+		print(fibonacci(i));
 		if (i < x) {
 			recur(i + 1);
 		}
