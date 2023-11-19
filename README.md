@@ -1,6 +1,6 @@
 # Toyscript
-Interpreter I built in order to learn. 
-It comes with builtin support for Lists and some functional programming support.
+Interpreted language I built in order to learn. 
+It comes with builtin support for lists, strings and first-class functions.
 
 * Running `toyscript` without any arguments will start the repl. It will evaluate a file if a filename is provided.
 * `build.sh` also allows for the tests to be run: `./build.sh test` will run all of them, `parser`, `lexer` or `eval` to run just  
