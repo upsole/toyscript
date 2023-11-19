@@ -7,7 +7,7 @@ It comes with builtin support for lists, strings and first-class functions.
 a section. If you append a test number after one of those, it will run just that single test.
 * See `tests/toy_sources` for toyscript examples
 ```
-val range = fn(begin, end) {
+val range = fn(begin, end) { # Generate a range of integers
         val new_list = [];
         val recur = fn(x) {
                 push(new_list, x);
@@ -19,7 +19,7 @@ val range = fn(begin, end) {
         return new_list;
 }
 
-val filter = fn(list, predicate) {
+val filter = fn(list, predicate) { # Functions are first-class, we pass them around
         val res = [];
         val recur = fn(tmp, item) {
                 if (predicate(item)) {

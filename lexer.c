@@ -115,13 +115,22 @@ char lex_peek(Lexer *l)
 	else
 		return l->input.buf[l->next];
 }
-
+void lex_skip_comment(Lexer *l)
+{
+	while (l->ch != '\n')
+		lex_read(l);
+}
 Token lex_tok(Lexer *l)
 {
 	Token t = {0};
 	while (is_blank(l->ch))
 		lex_read(l);
 	switch (l->ch) {
+		case '#': {
+			while (l->ch != '\n')
+				lex_read(l);
+			return lex_tok(l);
+		}
 		case '+':
 			t.type = PLUS;
 			t.lit = str("+");

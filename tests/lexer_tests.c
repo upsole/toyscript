@@ -1,11 +1,13 @@
 #include "tests.h"
 TestResult all_tokens_test(Arena *arena);
+TestResult skip_comments_test(Arena *arena);
 
 int main(int ac, char **av)
 {
 	Arena *arena = arena_init(MB(1));
 	u64 fail_count = 0;
-	Test tests[] = {{str("TEST ALL TOKENS"), &all_tokens_test}};
+	Test tests[] = {{str("TEST ALL TOKENS"), &all_tokens_test},
+			{str("IGNORE COMMENTS"), &skip_comments_test}};
 	if (ac < 2) {
 		for (int i = 0; i < arrlen(tests); i++) {
 			str_print(str_fmt(arena, "TEST LEXER %d: ", i));
@@ -46,6 +48,43 @@ TestResult all_tokens_test(Arena *arena)
 	Lexer *lexer = lex_init(
 	    arena, str(";,!*><(){}[]+-= == != 20 name fn return if else "
 		       "true false \"This is a string\""));
+	Token t = lex_tok(lexer);
+	int i = 0;
+	while (t.type != END) {
+		if (i >= arrlen(expected)) {
+			return (TestResult){false,
+					    str("End reached before expected")};
+		}
+		if (expected[i].type != t.type) {
+			return (TestResult){
+			    false,
+			    str_concatv(arena, 5, str("Expected: "),
+					tok_string(expected[i].type),
+					str("\nActual: "), tok_string(t.type),
+					str("\nToken type mismatch"))};
+		}
+		if (!str_eq(expected[i].lit, t.lit)) {
+			return (TestResult){
+			    false, str_concatv(
+				       arena, 5, str("Expected: "),
+				       expected[i].lit, str("\nActual: "),
+				       t.lit, str("\nToken literal mismatch"))};
+		}
+		t = lex_tok(lexer);
+		i++;
+	}
+	return pass();
+}
+
+TestResult skip_comments_test(Arena *arena)
+{
+	Lexer *lexer =
+	    lex_init(arena, str("val x = 5;# Line comment here\nprint(x);"));
+	Token expected[] = {tok(VAL, str("val")),     tok(IDENT, str("x")),
+			    tok(ASSIGN, str("=")),    tok(INT, str("5")),
+			    tok(SEMICOLON, str(";")), tok(IDENT, str("print")),
+			    tok(LPAREN, str("(")),    tok(IDENT, str("x")),
+			    tok(RPAREN, str(")")),    tok(SEMICOLON, str(";"))};
 	Token t = lex_tok(lexer);
 	int i = 0;
 	while (t.type != END) {

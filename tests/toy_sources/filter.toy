@@ -13,7 +13,7 @@ val filter = fn(list, predicate) {
 }
 
 val even? = fn(x) {
-	if (x % 2) == 0 {true} else {false}
+	if ((x % 2) == 0) {true} else {false}
 }
 
 val gt? = fn (target) {
