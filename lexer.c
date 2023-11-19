@@ -223,7 +223,7 @@ Token lex_tok(Lexer *l)
 String lex_read_ident(Lexer *l)
 {
 	u64 begin = l->pos;
-	while (is_alpha(l->ch))
+	while (is_alpha(l->ch) || is_num(l->ch) || l->ch == '?')
 		lex_read(l);
 	return str_slice(l->input, begin, l->pos);
 }
