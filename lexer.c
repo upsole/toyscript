@@ -33,6 +33,8 @@ void toktype_print(TokenType t)
 		printf("STAR");
 	else if (t == SLASH)
 		printf("SLASH");
+	else if (t == MOD)
+		printf("MOD");
 	else if (t == GT)
 		printf("GREATER_THAN");
 	else if (t == LT)
@@ -185,6 +187,10 @@ Token lex_tok(Lexer *l)
 		case '/':
 			t.type = SLASH;
 			t.lit = str("/");
+			break;
+		case '%':
+			t.type = MOD;
+			t.lit = str("%");
 			break;
 		case '!':
 			if (lex_peek(l) == '=') {

@@ -521,6 +521,8 @@ Element eval_infix_int(Arena *a, String operator, i64 left, i64 right)
 		return (res._int.value = left * right, res);
 	if (str_eq(operator, str("/")))
 		return (res._int.value = left / right, res);
+	if (str_eq(operator, str("%")))
+		return (res._int.value = left % right, res);
 	if (str_eq(operator, str("==")))
 		return (Element){.type = ELE_BOOL,
 				 ._bool.value = (left == right),

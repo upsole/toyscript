@@ -53,6 +53,7 @@ InfixParser infix_parser(TokenType t)
 		case MINUS:
 		case STAR:
 		case SLASH:
+		case MOD:
 		case EQ:
 		case NOT_EQ:
 		case LT:
@@ -84,6 +85,7 @@ Precedence precedence(TokenType t)
 			return SUM;
 		case STAR:
 		case SLASH:
+		case MOD:
 			return PRODUCT;
 		case LPAREN:
 			return CALL;
@@ -248,7 +250,7 @@ Expression parse_list(Parser *p)
 }
 
 ExpList *parse_explist(Parser *p, TokenType end_type)
-{ // XXX in these kind of list build that can fail: maybe we could track
+{ // XXX in this kind of list build that can fail: maybe we could track
   // starting point of arena and pop back to that point if it fails
 	ExpList *res = explist(p->arena);
 	if (p->peek_token.type == end_type) {

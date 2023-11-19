@@ -11,6 +11,7 @@ typedef enum TokenType {
 	BANG,
 	STAR,
 	SLASH,
+	MOD,
 	GT,
 	LT,
 	LPAREN,

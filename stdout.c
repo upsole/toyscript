@@ -4,14 +4,14 @@
 String tok_string(TokenType type)
 {
 	String names[] = {
-	    str("EOF"),	   str("ILLEGAL"),  str("SEMICOLON"), str("COMMA"),
-	    str("BANG"),   str("STAR"),	    str("SLASH"),     str("GT"),
-	    str("LT"),	   str("LPAREN"),   str("RPAREN"),    str("LBRACE"),
-	    str("RBRACE"), str("LBRACKET"), str("RBRACKET"),  str("PLUS"),
-	    str("MINUS"),  str("ASSIGN"),   str("EQ"),	      str("NOT_EQ"),
-	    str("INT"),	   str("IDENT"),    str("VAL"),	      str("FN"),
-	    str("RETURN"), str("IF"),	    str("ELSE"),      str("TRUE"),
-	    str("FALSE")};
+	    str("EOF"),	   str("ILLEGAL"), str("SEMICOLON"), str("COMMA"),
+	    str("BANG"),   str("STAR"),	   str("SLASH"),     str("MOD"),
+	    str("GT"),	   str("LT"),	   str("LPAREN"),    str("RPAREN"),
+	    str("LBRACE"), str("RBRACE"),  str("LBRACKET"),  str("RBRACKET"),
+	    str("PLUS"),   str("MINUS"),   str("ASSIGN"),    str("EQ"),
+	    str("NOT_EQ"), str("INT"),	   str("IDENT"),     str("VAL"),
+	    str("FN"),	   str("RETURN"),  str("IF"),	     str("ELSE"),
+	    str("TRUE"),   str("FALSE")};
 	return names[type];
 }
 
