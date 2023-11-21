@@ -14,7 +14,7 @@ int main(int ac, char **av)
 
 int exec_file(char *filename)
 {
-	Arena *a = arena_init(GB(1));
+	Arena *a = arena_init(KB(16));
 	String file = str_read_file(a, filename);
 	Lexer *lexer = lex_init(a, file);
 	Parser *parser = parser_init(a, lexer);

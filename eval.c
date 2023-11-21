@@ -56,7 +56,7 @@ static String stringer_fn(Arena *a, Element el)
 	return str_concatv(
 	    a, 4, str("["), identlist_string(a, el._fn.params), str("]->"),
 	    stmtlist_string(
-		a, el._fn.body)); // FIXME this somehow writes to stdin  in repl
+		a, el._fn.body)); // FIXME this somehow writes to stdin in repl
 }
 
 static String stringer_default(Arena *a, Element el)
@@ -351,7 +351,7 @@ Element eval_expression(Environment *env, Expression ex)
 			return (Element){0};
 	}
 }
-
+Element el_copy(Arena *a, Element elem);
 Element eval_call_function(Environment *env, Element function, ElemList *args)
 {
 	if (function.type == ELE_FUNCTION) {
@@ -363,8 +363,9 @@ Element eval_call_function(Environment *env, Element function, ElemList *args)
 					     function._fn.params->len));
 		}
 
+		Arena *fn_arena = arena_init(MB(1));
 		Namespace *fn_ns =
-		    ns_inner(env->arena, env->namespace,
+		    ns_inner(fn_arena, env->namespace,
 			     16); // Environment enclosed to function
 		ElemNode *el_n = args->head;
 		for (IdentNode *id_n = function._fn.params->head; id_n;
@@ -372,13 +373,17 @@ Element eval_call_function(Environment *env, Element function, ElemList *args)
 			ns_put(fn_ns, id_n->id.value, el_n->el);
 			el_n = el_n->next;
 		}
-		Environment fn_env = {env->arena, fn_ns};
+		Environment fn_env = {fn_arena, fn_ns};
 
 		Element res = eval_statements(&fn_env, function._fn.body);
 		if (res.type == ELE_RETURN) {
-			return *res._return.value;
+			Element copy = el_copy(env->arena, *res._return.value);
+			arena_free(&fn_arena);
+			return copy;
 		}
-		return res;
+		Element copy = el_copy(env->arena, res);
+		arena_free(&fn_arena);
+		return copy;
 	}
 	if (function.type == ELE_BUILTIN) {
 		return function._builtin.fn(env->arena, args);
@@ -623,6 +628,7 @@ Element *alloc_element(Arena *a, Element el)
 			return ptr;
 		case ELE_FUNCTION:
 			ptr->_fn = el._fn;
+			return ptr;
 		default:
 			return NULL;
 	}
@@ -663,9 +669,84 @@ Pair *pair_alloc(Arena *a, String key, Element elem)
 {
 	Pair *p = arena_alloc(a, sizeof(Pair));
 	p->key = key;
+	/* p->elem = el_copy(a, elem); XXX this breaks a lot of stuff */
 	p->elem = elem;
 	p->next = NULL;
 	return p;
+}
+
+IdentList *identlist_copy(Arena *a, IdentList *l);
+ElemList *elemlist_copy(Arena *a, ElemList *l);
+StmtList *stmtlist_copy(Arena *a, StmtList *l);
+Namespace *ns_copy(Arena *a, Namespace *ns);
+Element el_copy(Arena *a, Element elem)
+{
+	if (elem.type == ELE_RETURN)
+		return (Element){.type = ELE_RETURN,
+				 ._return.value =
+				     alloc_element(a, *elem._return.value)};
+
+	if (elem.type == ELE_FUNCTION) {
+		return (Element){
+		    .type = ELE_FUNCTION,
+		    ._fn = {.params = identlist_copy(a, elem._fn.params),
+			    .body = stmtlist_copy(a, elem._fn.body),
+			    .namespace = ns_copy(a, elem._fn.namespace)}};
+	}
+	if (elem.type == ELE_LIST) {
+		return (Element){.type = ELE_LIST,
+				 ._list.items =
+				     elemlist_copy(a, elem._list.items)};
+	}
+	return elem;
+}
+
+Namespace *ns_copy(Arena *a, Namespace *ns)
+{
+	Namespace *res = ns_create(a, ns->cap);
+	for (int i = 0; i < ns->cap; i++) {
+		if (ns->values[i]) {
+			res->values[i] =
+			    pair_alloc(res->arena, ns->values[i]->key,
+				       ns->values[i]->elem);
+			res->len++;
+			if (ns->values[i]->next) {
+				for (Pair *ns_cursor = ns->values[i]->next;
+				     ns_cursor; ns_cursor = ns_cursor->next) {
+					Pair *p = pair_alloc(a, ns_cursor->key,
+							     ns_cursor->elem);
+					p->next = res->values[i];
+					res->values[i] = p;
+					res->len++;
+				}
+			}
+		}
+	}
+	return res;
+}
+
+StmtList *stmtlist_copy(Arena *a, StmtList *l)
+{
+	StmtList *res = stmtlist(a);
+	for (StmtNode *cursor = l->head; cursor; cursor = cursor->next)
+		stmt_push(res, cursor->s);
+	return res;
+}
+
+IdentList *identlist_copy(Arena *a, IdentList *l)
+{
+	IdentList *res = identlist(a);
+	for (IdentNode *cursor = l->head; cursor; cursor = cursor->next)
+		ident_push(res, cursor->id);
+	return res;
+}
+
+ElemList *elemlist_copy(Arena *a, ElemList *l)
+{
+	ElemList *res = elemlist(a);
+	for (ElemNode *cursor = l->head; cursor; cursor = cursor->next)
+		elem_push(res, cursor->el);
+	return res;
 }
 
 Pair *ns_get_inner(Namespace *env, String key)
@@ -686,19 +767,19 @@ Pair *ns_get(Namespace *ns, String key)
 	return res;
 }
 
-void ns_put(Namespace *env, String key, Element elem)
+void ns_put(Namespace *ns, String key, Element elem)
 {
-	u64 id = hash(key) % env->cap;
-	for (Pair *p = env->values[id]; p; p = p->next) {
+	u64 id = hash(key) % ns->cap;
+	for (Pair *p = ns->values[id]; p; p = p->next) {
 		if (str_eq(key, p->key)) { // if key used, update
 			p->elem = elem;
 			return;
 		}
 	}
-	Pair *p = pair_alloc(env->arena, key, elem);
-	p->next = env->values[id];
-	env->values[id] = p;
-	env->len++;
+	Pair *p = pair_alloc(ns->arena, key, elem);
+	p->next = ns->values[id];
+	ns->values[id] = p;
+	ns->len++;
 }
 
 Element eval_identifier(Environment *env, Expression identifier)
