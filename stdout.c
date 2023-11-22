@@ -190,6 +190,9 @@ void prog_print(Program p)
 void stmt_print(Statement s)
 {
 	switch (s.type) {
+		case PROGRAM:
+			prog_print(s._program);
+			break;
 		case STMT_VAL:
 			val_stmt_print(s);
 			break;

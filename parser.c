@@ -423,7 +423,7 @@ bool expect_peek(Parser *p, TokenType t)
 
 Expression *alloc_expression(Parser *p, Expression ex)
 {
-	Expression *ptr = arena_alloc(p->arena, sizeof(ex));
+	Expression *ptr = arena_alloc(p->arena, sizeof(Expression));
 
 	ptr->type = ex.type;
 	switch (ex.type) {
