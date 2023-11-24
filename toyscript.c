@@ -26,6 +26,9 @@ int repl()
 		if (str_eq(input, str("exit"))) break;
 		l = lexer(a, input);
 		print_tokens(a, l);
+#ifdef DEV_DEBUG
+		arena_stats(a, __FILE__, __LINE__);
+#endif
 		arena_reset(a);
 	}
 	return 0;

@@ -138,7 +138,7 @@ Token lexer_token(Lexer *l)
 			}
 			break;
 		case '"':
-			t.type = STRING;
+			t.type = TK_STRING;
 			t.lit = lexer_read_string(l);
 			break;
 		case 0:
@@ -150,7 +150,7 @@ Token lexer_token(Lexer *l)
 				return t;
 			} else if (is_num(l->ch)) {
 				t.lit = lexer_read_int(l);
-				t.type = INT;
+				t.type = TK_INT;
 				return t;
 			} else {
 				t.type = ILLEGAL;
@@ -188,15 +188,15 @@ priv String lexer_read_string(Lexer *l)
 
 priv TokenType keywords(String s)
 {
-	if (str_eq(s, str("val"))) return VAL;
-	if (str_eq(s, str("var"))) return VAR;
-	if (str_eq(s, str("fn"))) return FN;
-	if (str_eq(s, str("return"))) return RETURN;
+	if (str_eq(s, str("val"))) return TK_VAL;
+	if (str_eq(s, str("var"))) return TK_VAR;
+	if (str_eq(s, str("fn"))) return TK_FN;
+	if (str_eq(s, str("return"))) return TK_RETURN;
 	if (str_eq(s, str("if"))) return IF;
 	if (str_eq(s, str("else"))) return ELSE;
 	if (str_eq(s, str("true"))) return TRUE;
 	if (str_eq(s, str("false"))) return FALSE;
-	return IDENT;
+	return TK_IDENT;
 }
 
 // HELPERS

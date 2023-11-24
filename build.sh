@@ -23,6 +23,6 @@ case $1 in
 		[[ $? -eq 0 ]] && vim-local-rc;;
 	*)
 		compile_demo;
-		./demo.out;
+		[[ $? -eq 0 ]] && ./demo.out;
 		[[ $? -eq 0 ]] && vim-local-rc;;
 esac
