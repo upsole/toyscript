@@ -10,7 +10,6 @@
 #define PAGE_SIZE KB(4)
 #define DECOMMIT_MIN MB(32)
 // HEADERS
-priv void arena_pop_to(Arena *a, u64 pos);
 priv void *reserve_virtual_memory(u64 size);
 priv void commit_memory(void *block, u64 size);
 priv int free_virtual_memory(void *ptr, size_t size);
@@ -38,7 +37,7 @@ Arena	*arena(u64 cap)
 
 void *arena_alloc(Arena *a, u64 size)
 {
-	if ((a->used + size) > a->cap) {
+	if (NEVER(((a->used + size) > a->cap))) {
 		dprintf(2, "!PANIC: Arena %p ran out of space\n", a);
 		arena_stats(a, __FILE__, __LINE__);
 		printf("Tried to alloc %lu bytes.", size);
@@ -83,7 +82,7 @@ void arena_free(Arena **a)
 	(*a) = NULL;
 }
 
-priv void arena_pop_to(Arena *a, u64 pos)
+void arena_pop_to(Arena *a, u64 pos)
 {
 	u64 min = sizeof(Arena);
 	u64 new_pos = (pos > min) ? pos : min;
@@ -119,7 +118,7 @@ void	arena_stats(Arena *a, char *file, i32 line)
 priv void *reserve_virtual_memory(u64 size)
 {
 	void *buf = mmap(0, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (!buf) {
+	if (NEVER(!buf)) {
 		dprintf(2, "!PANIC: Could not reserve memory\n"), exit(1);
 	} 
 	return buf;
@@ -236,6 +235,34 @@ char	*str_dupc(Arena *a, String s)
 	memcpy(cstring, s.buf, s.len);
 	cstring[s.len] = 0;
 	return cstring;
+}
+
+StrList	*strlist(Arena *a)
+{
+	StrList	*list = arena_alloc(a, sizeof(StrList));
+	list->arena = a;
+	list->head = NULL;
+	list->len = 0;
+	return list;
+}
+
+void strpush(StrList *l, String s)
+{
+	StrNode	*node = arena_alloc(l->arena, sizeof(StrNode));
+	node->string = s;
+	node->next = NULL;
+
+	if (ALWAYS(l)); // XXX extend
+
+	if (!l->head) {
+		l->head = node;
+		l->tail = node;
+		l->len++;
+		return ;
+	}
+	l->tail->next = node;
+	l->tail = node;
+	l->len++;
 }
 
 String str_read_file(Arena *a, char *filename)
