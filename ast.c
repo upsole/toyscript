@@ -328,6 +328,18 @@ priv AST *parse_call_expression(Parser *p, AST *function)
 	return res;
 }
 
+priv AST *parse_index_expression(Parser *p, AST *lst)
+{
+	u64	previous_offset = p->arena->used;
+	AST	*res = ast_alloc(p->arena, (AST) { AST_INDEX, .AST_INDEX = { lst, NULL } });
+	next_token(p);
+	AST *index = parse_expression(p, LOWEST);
+	if (!index || !expect_peek(p, RBRACKET)) 
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_INDEX.index = index;
+	return res;
+}
+
 // Tables
 priv PrefixParser PREFIX_PARSERS(TokenType type)
 {
@@ -372,8 +384,8 @@ priv InfixParser INFIX_PARSERS(TokenType type)
 			return &parse_infix_expression;
 		case LPAREN:
 			return &parse_call_expression;
-		/* case LBRACKET: */
-		/* 	return &parse_index_expression; */
+		case LBRACKET:
+			return &parse_index_expression;
 		default:
 			return NULL;
 	}
@@ -569,6 +581,14 @@ void ast_aprint(Arena *a, AST *node)
 				str_print(str("}"));
 			}
 			str_print(str("|"));
+			break;
+		case AST_INDEX:
+			str_print(str("("));
+			ast_aprint(a, node->AST_INDEX.lst);
+			str_print(str("["));
+			ast_aprint(a, node->AST_INDEX.index);
+			str_print(str("]"));
+			str_print(str(")"));
 			break;
 		default:
 			str_print(str("Unknown"));
