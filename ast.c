@@ -186,7 +186,10 @@ priv AST *parse_ident(Parser *p)
 priv ASTList *parse_many(Parser *p, TokenType end_type);
 priv AST *parse_list(Parser *p)
 {
-	return ast_alloc(p->arena, (AST) { AST_LIST, .AST_LIST = parse_many(p, RBRACKET) });
+	ASTList	*lst = parse_many(p, RBRACKET);
+	if (!lst)
+		return NULL;
+	return ast_alloc(p->arena, (AST) { AST_LIST, .AST_LIST = lst });
 }
 
 priv ASTList *parse_many(Parser *p, TokenType end_type)
@@ -314,6 +317,17 @@ priv AST *parse_infix_expression(Parser *p, AST *left)
 	return res;
 }
 
+priv AST *parse_call_expression(Parser *p, AST *function)
+{
+	u64	previous_offset = p->arena->used;
+	AST	*res = ast_alloc(p->arena, (AST) { AST_CALL, .AST_CALL = { function, NULL } });
+	ASTList	*args = parse_many(p, RPAREN);
+	if (!args) 
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_CALL.args = args;
+	return res;
+}
+
 // Tables
 priv PrefixParser PREFIX_PARSERS(TokenType type)
 {
@@ -356,8 +370,8 @@ priv InfixParser INFIX_PARSERS(TokenType type)
 		case LT:
 		case GT:
 			return &parse_infix_expression;
-		/* case LPAREN: */
-		/* 	return &parse_call_expression; */
+		case LPAREN:
+			return &parse_call_expression;
 		/* case LBRACKET: */
 		/* 	return &parse_index_expression; */
 		default:
@@ -532,6 +546,14 @@ void ast_aprint(Arena *a, AST *node)
 			str_print(str("->"));
 			astlist_print(a, node->AST_FN.body);
 			str_print(str("|"));
+			break;
+		case AST_CALL:
+			str_print(str("("));
+			ast_aprint(a, node->AST_CALL.function);
+			str_print(str("<"));
+			astlist_print(a, node->AST_CALL.args);
+			str_print(str(">"));
+			str_print(str(")"));
 			break;
 		case AST_COND:
 			str_print(str("|"));
