@@ -7,7 +7,6 @@ int main(void)
 	return repl();
 }
 
-
 String read_stdin(Arena *a);
 priv void print_tokens(Arena *a, Lexer *l);
 int repl()

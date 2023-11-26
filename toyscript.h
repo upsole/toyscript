@@ -48,9 +48,9 @@ struct AST {
 		struct AST_INT { long value; } AST_INT;
 		struct AST_BOOL { bool value; } AST_BOOL;
 		String AST_STR;
-		struct AST_RETURN { AST *value; } *AST_RETURN;
-		struct AST_VAL { AST *value; } *AST_VAL;
-		struct AST_VAR { AST *value; } *AST_VAR;
+		struct AST_RETURN { AST *value; } AST_RETURN;
+		struct AST_VAL { String name; AST *value; } AST_VAL;
+		struct AST_VAR { String name; AST *value; } AST_VAR;
 		ASTList *AST_LIST;
 		struct AST_FN { ASTList *params; ASTList *body; } AST_FN;
 		struct AST_PREFIX { String op; AST *right; } AST_PREFIX;
@@ -73,7 +73,7 @@ typedef struct Parser {
 Lexer 	*lexer(Arena *a, String input);
 Token 	lexer_token(Lexer *l);
 String	token_str(TokenType type);
-
+void 	ast_aprint(Arena *a, AST *node);
 Parser	*parser(Arena *a, Lexer *l);
 AST		*parse_program(Parser *p);
 void	parser_print_errors(Parser *p);

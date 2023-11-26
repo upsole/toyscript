@@ -4,16 +4,17 @@ cflags="-Wall -Werror -Wimplicit-fallthrough "
 dev="-Wno-unused-variable -Wno-unused-function -Wno-unused-value -g3"
 src="base.c lexer.c ast.c"
 args="$cflags $dev $src -DDEV_DEBUG"
+cc=gcc
 ### 
 
 compile()
 {
-	gcc $args toyscript.c -o toyscript
+	$cc $args toyscript.c -o toyscript
 }
 
 compile_demo()
 {
-	gcc $args main.c -o demo.out
+	$cc $args main.c -o demo.out
 }
 
 case $1 in

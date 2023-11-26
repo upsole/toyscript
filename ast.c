@@ -48,20 +48,78 @@ AST	*parse_program(Parser *p)
 	return program;
 }
 
+priv AST *parse_return(Parser *p);
+priv AST *parse_binding(Parser *p, TokenType type);
 priv AST *parse_expression_stmt(Parser *p);
 priv AST *parse_statement(Parser *p)
 {
 	switch (p->cur_token.type) {
+		case TK_RETURN:
+			return parse_return(p);
 		case TK_VAL:
 		case TK_VAR:
-		case TK_RETURN:
-			return NULL;
+			return parse_binding(p, p->cur_token.type);
 		default:
 			return parse_expression_stmt(p);
 	}
 }
 
 priv AST *parse_expression(Parser *p, Precedence prec);
+priv AST *parse_return(Parser *p)
+{
+	u64	previous_offset = p->arena->used;
+	next_token(p);
+	AST *res = ast_alloc(p->arena, (AST) { AST_RETURN, .AST_RETURN = { NULL }});
+	AST *right = parse_expression(p, LOWEST);
+	if (!right) {
+		arena_pop_to(p->arena, previous_offset);
+		return NULL;
+	}
+	res->AST_RETURN.value = right;
+	if (p->next_token.type == SEMICOLON) next_token(p);
+	return res;
+}
+
+priv AST *parse_binding(Parser *p, TokenType type)
+{
+	u64	previous_offset = p->arena->used;
+	AST	*res; 
+	if (!expect_peek(p, TK_IDENT)) return NULL;
+
+	switch (type) {
+		case TK_VAL:
+			res = ast_alloc(p->arena, (AST) { AST_VAL, .AST_VAL = { p->cur_token.lit, NULL}});
+			break;
+		case TK_VAR:
+			res = ast_alloc(p->arena, (AST) { AST_VAR, .AST_VAR = { p->cur_token.lit, NULL}});
+			break;
+		default:
+			return NULL;
+	}
+	if (!expect_peek(p, ASSIGN)) {
+		arena_pop_to(p->arena, previous_offset);
+		return NULL;
+	}
+	next_token(p);
+	AST *right = parse_expression(p, LOWEST);
+	if (!right) {
+		arena_pop_to(p->arena, previous_offset);
+		return NULL;
+	} 
+	switch (type) {
+		case TK_VAL:
+			res->AST_VAL.value = right;
+			break;
+		case TK_VAR:
+			res->AST_VAR.value = right;
+			break;
+		default:
+			return NULL;
+	}
+	if (p->next_token.type == SEMICOLON) next_token(p);
+	return res;
+}
+
 priv AST *parse_expression_stmt(Parser *p)
 {
 	AST	*res = parse_expression(p, LOWEST);
@@ -87,12 +145,6 @@ priv AST *parse_expression(Parser *p, Precedence prec)
 		res = ifix_parser(p, res);
 	}
 	return res;
-}
-
-priv void next_token(Parser *p)
-{
-	p->cur_token = p->next_token;
-	p->next_token = lexer_token(p->lexer);
 }
 
 priv i64 str_atol(String s);
@@ -281,7 +333,13 @@ priv void astpush(ASTList *l, AST *ast)
 	l->len++;
 }
 
-// HELPERS
+// PARSER INTERNALS
+priv void next_token(Parser *p)
+{
+	p->cur_token = p->next_token;
+	p->next_token = lexer_token(p->lexer);
+}
+
 priv bool expect_peek(Parser *p, TokenType type)
 {
 	if (p->next_token.type == type) {
@@ -310,6 +368,67 @@ void parser_print_errors(Parser *p)
 		str_print(tmp->string), str_print(str("\n"));
 }
 
+void ast_aprint(Arena *a, AST *node)
+{
+	switch (node->type) {
+		case AST_VAL:
+			str_print(str("|"));
+			str_print(node->AST_VAL.name);
+			str_print(str("="));
+			ast_aprint(a, node->AST_VAL.value);
+			str_print(str("|"));
+			break;
+		case AST_VAR:
+			str_print(str("|"));
+			str_print(node->AST_VAR.name);
+			str_print(str("="));
+			ast_aprint(a, node->AST_VAR.value);
+			str_print(str("|"));
+			break;
+		case AST_RETURN:
+			str_print(str("|"));
+			str_print(str("return "));
+			ast_aprint(a, node->AST_RETURN.value);
+			str_print(str("|"));
+			break;
+		case AST_INT:
+			str_print(str_fmt(a, "%ld", node->AST_INT.value));
+			break;
+		case AST_BOOL:
+			if (node->AST_BOOL.value) str_print(str("TRUE"));
+			else str_print(str("FALSE"));
+			break;
+		case AST_STR:
+		case AST_IDENT:
+			str_print(node->AST_STR);
+			break;
+		case AST_LIST:
+			str_print(str("["));
+			for (ASTNode *tmp = node->AST_LIST->head; tmp; tmp = tmp->next) {
+				ast_aprint(a, tmp->ast); 
+				if (tmp->next) str_print(str(" "));
+			}
+			str_print(str("]"));
+			break;
+		case AST_PREFIX:
+			str_print(str("("));
+			str_print(node->AST_PREFIX.op);
+			ast_aprint(a, node->AST_PREFIX.right);
+			str_print(str(")"));
+			break;
+		case AST_INFIX:
+			str_print(str("("));
+			ast_aprint(a, node->AST_INFIX.left);
+			str_print(node->AST_INFIX.op);
+			ast_aprint(a, node->AST_INFIX.right);
+			str_print(str(")"));
+			break;
+		default:
+			str_print(str("Unknown"));
+	}
+}
+
+// HELPERS
 priv bool is_num(char c)
 {
 	return (('0' <= c) && (c <= '9'));
