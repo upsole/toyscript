@@ -237,6 +237,22 @@ char	*str_dupc(Arena *a, String s)
 	return cstring;
 }
 
+priv bool is_num(char c)
+{
+	return (('0' <= c) && (c <= '9'));
+}
+
+i64 str_atol(String s)
+{
+	i64 x = 0;
+	u64 i = 0;
+	while (is_num(s.buf[i]) && i < s.len) {
+		x = x * 10 + (s.buf[i] - '0');
+		i++;
+	}
+	return x;
+}
+
 StrList	*strlist(Arena *a)
 {
 	StrList	*list = arena_alloc(a, sizeof(StrList));

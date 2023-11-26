@@ -27,7 +27,8 @@ typedef struct AST AST;
 typedef struct ASTNode ASTNode;
 typedef enum ASTType { AST_VAL, AST_VAR, AST_RETURN, // STATEMENTS
 	AST_IDENT, AST_INT, AST_BOOL, AST_STR, AST_LIST, AST_FN, // VALUES
-	AST_PREFIX, AST_INFIX, AST_COND, AST_CALL, AST_INDEX // EXPRESSIONS
+	AST_PREFIX, AST_INFIX, AST_COND, AST_CALL, AST_INDEX, // EXPRESSIONS
+	AST_PROGRAM
 } ASTType;
 
 struct ASTNode {
@@ -69,13 +70,50 @@ typedef struct Parser {
 	Token next_token;
 } Parser;
 
+// ~EVAL
+typedef struct Element Element;
+typedef struct ElemList	*ElemList;
+typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, RETURN, FUNCTION, BUILTIN } ElementType;
+typedef Element (*BuiltinFunction)(Arena *a, void *args);
+struct Element {
+	ElementType type;
+	union {
+		struct		ELE_NULL {} ELE_NULL;
+		String 		ERR;
+		long 		INT;
+		bool 		BOOL;
+		String		STR;
+		ElemList	*LIST;
+		// TODO ElemArray type used by and val = [] and Tuples
+		struct RETURN { Element *value; } RETURN; 
+		/* struct FUNCTION { ASTList *params, ASTList *body, Namespace *namespace } FUNCTION; */
+		/* struct BUILTIN { BuiltinFunction *function } BUILTIN; */
+	};
+};
+
+typedef struct ElemNode {
+	Element	element;
+	struct ElemNode *next;
+} ElemNode;
+struct ElemList {
+	Arena	*a;
+	ElemNode *head;
+	ElemNode *tail;
+	int len;
+};
+
 // API
 Lexer 	*lexer(Arena *a, String input);
 Token 	lexer_token(Lexer *l);
 String	token_str(TokenType type);
+
 void 	ast_aprint(Arena *a, AST *node);
 Parser	*parser(Arena *a, Lexer *l);
 AST		*parse_program(Parser *p);
 void	parser_print_errors(Parser *p);
+
+Element	eval(Arena *a, AST *node);
+String	to_string(Arena *a, Element e);
+String	type_str(ElementType type);
 
 #endif 

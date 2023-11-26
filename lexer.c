@@ -226,6 +226,8 @@ String token_str(TokenType type)
 	    str("NOT_EQ"), str("INT"),	   str("STRING"), 	 str("IDENT"),     str("VAL"),    
 		str("VAR"),    str("FN"),	   str("RETURN"),    str("IF"),	   
 		str("ELSE"),   str("TRUE"),    str("FALSE")};
+	if (NEVER(type < 0 || type >= arrlen(names)))
+		return str("Unknown type");
 	return names[type];
 }
 

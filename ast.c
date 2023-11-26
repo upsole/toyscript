@@ -37,7 +37,7 @@ AST	*parse_program(Parser *p)
 {
 	AST	*tmp;
 	AST	*program = ast_alloc(p->arena,  
-			(AST) { .type = AST_LIST, .AST_LIST = astlist(p->arena) });
+			(AST) { .type = AST_PROGRAM, .AST_LIST = astlist(p->arena) });
 
 	while (p->cur_token.type != END) {
 		tmp = parse_statement(p);
@@ -161,8 +161,6 @@ priv AST *parse_expression(Parser *p, Precedence prec)
 	return res;
 }
 
-priv i64 str_atol(String s);
-priv bool is_num(char c);
 priv AST *parse_int(Parser *p)
 {
 	return ast_alloc(p->arena, (AST) { AST_INT, .AST_INT = {str_atol(p->cur_token.lit)} });
@@ -535,6 +533,7 @@ void ast_aprint(Arena *a, AST *node)
 		case AST_IDENT:
 			str_print(node->AST_STR);
 			break;
+		case AST_PROGRAM:
 		case AST_LIST:
 			astlist_print(a, node->AST_LIST);
 			break;
@@ -593,21 +592,4 @@ void ast_aprint(Arena *a, AST *node)
 		default:
 			str_print(str("Unknown"));
 	}
-}
-
-// HELPERS
-priv bool is_num(char c)
-{
-	return (('0' <= c) && (c <= '9'));
-}
-
-priv i64 str_atol(String s)
-{
-	i64 x = 0;
-	u64 i = 0;
-	while (is_num(s.buf[i]) && i < s.len) {
-		x = x * 10 + (s.buf[i] - '0');
-		i++;
-	}
-	return x;
 }

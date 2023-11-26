@@ -2,7 +2,7 @@
 ### 
 cflags="-Wall -Werror -Wimplicit-fallthrough "
 dev="-Wno-unused-variable -Wno-unused-function -Wno-unused-value -g3"
-src="base.c lexer.c ast.c"
+src="base.c lexer.c ast.c evaluator.c"
 args="$cflags $dev $src -DDEV_DEBUG"
 cc=gcc
 ### 

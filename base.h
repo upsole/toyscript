@@ -76,6 +76,7 @@ String	str_fmt(Arena *a, char *fmt, ...);
 String 	str_concat(Arena *a, String s1, String s2);
 String 	str_concat_n(Arena *a, int count, ...);
 char	*str_dupc(Arena *a, String s);
+i64 	str_atol(String s);
 
 StrList	*strlist(Arena *a);
 void	strpush(StrList *l, String s);
