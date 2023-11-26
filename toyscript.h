@@ -73,7 +73,7 @@ typedef struct Parser {
 // ~EVAL
 typedef struct Element Element;
 typedef struct Namespace Namespace;
-typedef struct ElemList	*ElemList;
+typedef struct ElemList	ElemList;
 typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, RETURN, FUNCTION, BUILTIN } ElementType;
 typedef Element (*BuiltinFunction)(Arena *a, void *args);
 struct Element {
@@ -97,7 +97,7 @@ typedef struct ElemNode {
 	struct ElemNode *next;
 } ElemNode;
 struct ElemList {
-	Arena	*a;
+	Arena	*arena;
 	ElemNode *head;
 	ElemNode *tail;
 	int len;

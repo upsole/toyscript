@@ -7,12 +7,17 @@ priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap);
 priv Bind *ns_get(Namespace *ns, String key);
 priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
 
+priv ElemList *elemlist(Arena *a);
+priv void elempush(ElemList *lst, Element el);
+
 priv Element error(String msg);
 priv Element *elem_alloc(Arena *a, Element elem);
 // TODO Want to split arenas - One is flushed (eval) and one persists (namespace)
 priv Element eval_program(Arena *a, Namespace *ns, AST *node);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
+priv Element eval_identifier(Arena *a, Namespace *ns, String name);
+priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst);
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
 	switch (node->type) {
@@ -37,6 +42,14 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			return (Element) { RETURN, .RETURN = { elem_alloc(a, value) }};
 		} break;
 		// EXPRESSIONS
+		case AST_IDENT:
+			return eval_identifier(a, ns, node->AST_STR);
+		case AST_LIST: {
+			ElemList *lst = eval_list(a, ns, node->AST_LIST);
+			if (lst->len == 1 && lst->head->element.type == ERR)
+				return lst->head->element;
+			return (Element) { LIST, .LIST = lst };
+		} break;
 		case AST_PREFIX: {
 			Element right = eval(a, ns, node->AST_PREFIX.right);
 			if (right.type == ERR) return right;
@@ -75,6 +88,31 @@ priv Element eval_program(Arena *a, Namespace *ns, AST *node)
 		if (res.type == ERR) {
 			return res;
 		} 
+	}
+	return res;
+}
+
+priv Element eval_identifier(Arena *a, Namespace *ns, String name)
+{
+	Bind *res = ns_get(ns, name);
+	if (res && ALWAYS(res->element)) return (*res->element);
+	// TODO resolve builtins
+	return error(CONCAT(a, str("Name not found: "), name));
+}
+
+priv ElemList *elemlist_single(Arena *a, Element el);
+priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst)
+{
+	u64	previous_offset = a->used;
+	ElemList *res = elemlist(a);
+	Element tmp = {0};
+	for (ASTNode *cursor = lst->head; cursor; cursor = cursor->next) {
+		tmp = eval(a, ns, cursor->ast);
+		if (tmp.type == ERR) {
+			arena_pop_to(a, previous_offset);
+			return elemlist_single(a, tmp);
+		}
+		elempush(res, tmp);
 	}
 	return res;
 }
@@ -181,6 +219,7 @@ priv Element *elem_alloc(Arena *a, Element elem)
 }
 
 // STDOUT
+priv String list_to_string(Arena *a, ElemList *lst);
 String	to_string(Arena *a, Element e)
 {
 	switch (e.type) {
@@ -192,11 +231,38 @@ String	to_string(Arena *a, Element e)
 			return (e.BOOL) ? str("true") : str("false");
 		case STR:
 			return e.STR;
+		case LIST:
+			return list_to_string(a, e.LIST);
 		case ERR:
 			return e.ERR;
 		default:
 			return str("Unknown");
 	}
+}
+
+priv String list_to_string(Arena *a, ElemList *lst)
+{
+	if (!lst) return str("");
+	char *buf = arena_alloc(a, 1);
+	buf[0] = '[';
+	u64 len = 1;
+	for (ElemNode *cursor = lst->head; cursor; cursor = cursor->next) {
+		String tmp = to_string(a, cursor->element);
+		arena_alloc(a, tmp.len);
+		memcpy(buf + len, tmp.buf, tmp.len);
+		len += tmp.len;
+		if (cursor->next) {
+			tmp = str(", ");
+			arena_alloc(a, tmp.len);
+			memcpy(buf + len, tmp.buf, tmp.len);
+			len += tmp.len;
+		}
+	}
+	String tmp = str("]");
+	arena_alloc(a, tmp.len);
+	memcpy(buf + len, tmp.buf, tmp.len);
+	len += tmp.len;
+	return (String){ buf, len };
 }
 
 String	type_str(ElementType type)
@@ -211,6 +277,41 @@ String	type_str(ElementType type)
 	return strings[type];
 }
 
+// ~ELEMLIST
+priv ElemList *elemlist(Arena *a)
+{
+	ElemList *l = arena_alloc(a, sizeof(ElemList));
+	l->arena = a;
+	l->head = NULL;
+	l->len = 0;
+	return l;
+}
+
+priv void elempush(ElemList *l, Element el)
+{
+	ElemNode *node = arena_alloc(l->arena, sizeof(ElemNode));
+	node->element = el;
+	node->next = NULL;
+
+	if (NEVER(!l)); // XXX extend
+
+	if (!l->head) {
+		l->head = node;
+		l->tail = node;
+		l->len++;
+		return ;
+	}
+	l->tail->next = node;
+	l->tail = node;
+	l->len++;
+}
+
+priv ElemList *elemlist_single(Arena *a, Element el)
+{
+	ElemList *lst = elemlist(a);
+	elempush(lst, el);
+	return lst;
+}
 // ~NAMESPACE
 Namespace *ns_create(Arena *a, u64 cap)
 {
