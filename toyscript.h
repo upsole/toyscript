@@ -72,6 +72,7 @@ typedef struct Parser {
 
 // ~EVAL
 typedef struct Element Element;
+typedef struct Namespace Namespace;
 typedef struct ElemList	*ElemList;
 typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, RETURN, FUNCTION, BUILTIN } ElementType;
 typedef Element (*BuiltinFunction)(Arena *a, void *args);
@@ -102,6 +103,22 @@ struct ElemList {
 	int len;
 };
 
+typedef struct Bind Bind;
+struct Bind {
+	String key;
+	Element *element;
+	bool	mutable;
+	Bind *next;
+};
+
+struct Namespace {
+	Arena *arena;
+	u64 len;
+	u64 cap;
+	Bind **values;
+	Namespace *parent;
+};
+
 // API
 Lexer 	*lexer(Arena *a, String input);
 Token 	lexer_token(Lexer *l);
@@ -112,8 +129,10 @@ Parser	*parser(Arena *a, Lexer *l);
 AST		*parse_program(Parser *p);
 void	parser_print_errors(Parser *p);
 
-Element	eval(Arena *a, AST *node);
+Element	eval(Arena *a, Namespace *ns, AST *node);
 String	to_string(Arena *a, Element e);
 String	type_str(ElementType type);
+
+Namespace *ns_create(Arena *a, u64 cap);
 
 #endif 

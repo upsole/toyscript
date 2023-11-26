@@ -1,39 +1,51 @@
 #include "base.h"
 #include "toyscript.h"
 
+#define IMMUTABLE 0
+#define MUTABLE 1
+priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap); 
+priv Bind *ns_get(Namespace *ns, String key);
+priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
+
 priv Element error(String msg);
-Element	*elem_alloc(Arena *a, Element elem);
-Element	*elem_alloc(Arena *a, Element elem)
-{
-	Element	*ptr = arena_alloc(a, sizeof(Element));
-	*ptr = elem;
-	return ptr;
-}
+priv Element *elem_alloc(Arena *a, Element elem);
 // TODO Want to split arenas - One is flushed (eval) and one persists (namespace)
-priv Element eval_program(Arena *a, AST *node);
+priv Element eval_program(Arena *a, Namespace *ns, AST *node);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
-Element	eval(Arena *a, AST *node)
+Element	eval(Arena *a, Namespace *ns, AST *node)
 {
 	switch (node->type) {
 		case AST_PROGRAM:
-			return eval_program(a, node);
+			return eval_program(a, ns, node);
 		// STATEMENTS
+		case AST_VAL: {
+			Element value = eval(a, ns, node->AST_VAL.value);
+			if (value.type == ERR) return value;
+			ns_put(ns, node->AST_VAL.name, value, IMMUTABLE);
+			return value;
+		} break;
+		case AST_VAR: {
+			Element value = eval(a, ns, node->AST_VAR.value);
+			if (value.type == ERR) return value;
+			ns_put(ns, node->AST_VAR.name, value, MUTABLE);
+			return value;
+		} break;
 		case AST_RETURN: {
-			Element value = eval(a, node->AST_RETURN.value);
+			Element value = eval(a, ns, node->AST_RETURN.value);
 			if (value.type == ERR) return value;
 			return (Element) { RETURN, .RETURN = { elem_alloc(a, value) }};
 		} break;
 		// EXPRESSIONS
 		case AST_PREFIX: {
-			Element right = eval(a, node->AST_PREFIX.right);
+			Element right = eval(a, ns, node->AST_PREFIX.right);
 			if (right.type == ERR) return right;
 			return eval_prefix_expression(a, node->AST_PREFIX.op, right);
 		} break;
 		case AST_INFIX: {
-			Element left = eval(a, node->AST_INFIX.left);
+			Element left = eval(a, ns, node->AST_INFIX.left);
 			if (left.type == ERR) return left;
-			Element right = eval(a, node->AST_INFIX.right);
+			Element right = eval(a, ns, node->AST_INFIX.right);
 			if (right.type == ERR) return right;
 			return eval_infix_expression(a, left, node->AST_INFIX.op, right);
 		}
@@ -50,11 +62,11 @@ Element	eval(Arena *a, AST *node)
 	return (Element) { ELE_NULL };
 }
 
-priv Element eval_program(Arena *a, AST *node)
+priv Element eval_program(Arena *a, Namespace *ns, AST *node)
 {
 	Element	res = {0};
 	for (ASTNode *tmp = node->AST_LIST->head; tmp; tmp = tmp->next) {
-		res = eval(a, tmp->ast);
+		res = eval(a, ns, tmp->ast);
 		if (res.type == RETURN) {
 			if (NEVER(!res.RETURN.value))
 				return (Element) { ELE_NULL };
@@ -104,7 +116,6 @@ priv Element eval_infix_int(Arena *a, i64 left, String op, i64 right);
 priv Element eval_infix_str(Arena *a, String left, String op, String right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right)
 {
-
 	if (left.type != right.type) 
 		return error(CONCAT(a, str("Invalid types in operation: "),
 					type_str(left.type), op, type_str(right.type)));
@@ -161,7 +172,15 @@ priv Element error(String msg)
 	return (Element) { ERR, .ERR = msg };
 }
 
-// stdout
+// HELPER
+priv Element *elem_alloc(Arena *a, Element elem)
+{
+	Element	*ptr = arena_alloc(a, sizeof(Element));
+	*ptr = elem;
+	return ptr;
+}
+
+// STDOUT
 String	to_string(Arena *a, Element e)
 {
 	switch (e.type) {
@@ -192,3 +211,75 @@ String	type_str(ElementType type)
 	return strings[type];
 }
 
+// ~NAMESPACE
+Namespace *ns_create(Arena *a, u64 cap)
+{
+	Namespace *ns = arena_alloc(a, sizeof(Namespace));
+	ns->arena = a;
+	ns->len = 0;
+	ns->cap = cap;
+	ns->values = arena_alloc_zero(a, sizeof(Bind *) * ns->cap);
+	ns->parent = NULL;
+	return ns;
+}
+
+priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap)
+{
+	Namespace *ns = ns_create(a, cap);
+	ns->parent = parent;
+	return ns;
+}
+
+priv u64 hash(String key) // FNV hash
+{
+	char *buf = key.buf;
+	u64 hash = 1099511628211LU;
+	for (int i = 0; i < key.len; i++) {
+		hash ^= (u64)(u8)*buf;
+		hash *= 14695981039346656037LU;
+		buf++;
+	}
+	return hash;
+}
+
+priv Bind *bind_alloc(Arena *a, String key, Element el, bool is_mutable)
+{
+	Bind *b = arena_alloc(a, sizeof(Bind));
+	b->key = key;
+	b->element = elem_alloc(a, el);
+	b->mutable = is_mutable;
+	b->next = NULL;
+	return b;
+}
+
+priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable) // XXX remember if this the only check we need when implementing val / var
+{
+	u64 id = hash(key) % ns->cap;
+	for (Bind *b = ns->values[id]; b; b = b->next) {
+		if (str_eq(key, b->key)) { // if key used, update
+			if (is_mutable)
+				b->element = elem_alloc(ns->arena, elem);
+			return;
+		}
+	}
+	Bind *b = bind_alloc(ns->arena, key, elem, is_mutable);
+	b->next = ns->values[id];
+	ns->values[id] = b;
+	ns->len++;
+}
+
+priv Bind *ns_get_inner(Namespace *ns, String key)
+{
+	u64 id = hash(key) % ns->cap;
+	for (Bind *tmp = ns->values[id]; tmp; tmp = tmp->next)
+		if (str_eq(key, tmp->key))
+			return tmp;
+	return NULL;
+}
+
+priv Bind *ns_get(Namespace *ns, String key)
+{
+	Bind *res = ns_get_inner(ns, key);
+	if (!res && ns->parent) res = ns_get(ns->parent, key);
+	return res;
+}
