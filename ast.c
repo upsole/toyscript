@@ -48,6 +48,20 @@ AST	*parse_program(Parser *p)
 	return program;
 }
 
+ASTList *parse_block_statement(Parser *p)
+{
+	AST	*tmp;
+	ASTList	*block = astlist(p->arena);
+	next_token(p);
+	while (p->cur_token.type != RBRACE) {
+		tmp = parse_statement(p);
+		if (tmp) 
+			astpush(block, tmp);
+		next_token(p);
+	}
+	return block;
+}
+
 priv AST *parse_return(Parser *p);
 priv AST *parse_binding(Parser *p, TokenType type);
 priv AST *parse_expression_stmt(Parser *p);
@@ -213,6 +227,41 @@ priv AST *parse_grouped_expression(Parser *p)
 	return res;
 }
 
+priv AST *parse_if_expression(Parser *p)
+{
+	u64 previous_offset = p->arena->used;
+	AST	*res;
+	if (!expect_peek(p, LPAREN)) return NULL;
+	next_token(p);
+	res = ast_alloc(p->arena, (AST) { AST_COND, .AST_COND = {0} });
+
+	AST	*condition = parse_expression(p, LOWEST);
+	if (!condition) 
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_COND.condition = condition;
+
+	if (!expect_peek(p, RPAREN))
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	if (!expect_peek(p, LBRACE))
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+
+	ASTList	*consequence = parse_block_statement(p);
+	if (!consequence)
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_COND.consequence = consequence;
+
+	if (p->next_token.type == ELSE) {
+		next_token(p);
+		if (!expect_peek(p, LBRACE))
+			return (arena_pop_to(p->arena, previous_offset), NULL);
+		ASTList *alternative = parse_block_statement(p);
+		if (!alternative)
+			return (arena_pop_to(p->arena, previous_offset), NULL);
+		res->AST_COND.alternative = alternative;
+	}
+	return res;
+}
+
 priv AST *parse_infix_expression(Parser *p, AST *left)
 {
 	AST	*res = ast_alloc(p->arena, (AST) { AST_INFIX, .AST_INFIX = { .left = left, .op = p->cur_token.lit, .right = NULL }});
@@ -242,6 +291,8 @@ priv PrefixParser PREFIX_PARSERS(TokenType type)
 			return &parse_prefix_expression;
 		case LPAREN:
 			return &parse_grouped_expression;
+		case IF:
+			return &parse_if_expression;
 		default:
 			return NULL;
 	}
@@ -368,6 +419,17 @@ void parser_print_errors(Parser *p)
 		str_print(tmp->string), str_print(str("\n"));
 }
 
+priv void astlist_print(Arena *a, ASTList *lst)
+{
+	str_print(str("["));
+	for (ASTNode *tmp = lst->head; tmp; tmp = tmp->next) {
+		ast_aprint(a, tmp->ast); 
+		if (tmp->next) str_print(str(" "));
+	}
+	str_print(str("]"));
+}
+
+
 void ast_aprint(Arena *a, AST *node)
 {
 	switch (node->type) {
@@ -403,12 +465,7 @@ void ast_aprint(Arena *a, AST *node)
 			str_print(node->AST_STR);
 			break;
 		case AST_LIST:
-			str_print(str("["));
-			for (ASTNode *tmp = node->AST_LIST->head; tmp; tmp = tmp->next) {
-				ast_aprint(a, tmp->ast); 
-				if (tmp->next) str_print(str(" "));
-			}
-			str_print(str("]"));
+			astlist_print(a, node->AST_LIST);
 			break;
 		case AST_PREFIX:
 			str_print(str("("));
@@ -422,6 +479,21 @@ void ast_aprint(Arena *a, AST *node)
 			str_print(node->AST_INFIX.op);
 			ast_aprint(a, node->AST_INFIX.right);
 			str_print(str(")"));
+			break;
+		case AST_COND:
+			str_print(str("|"));
+			str_print(str("if"));
+			ast_aprint(a, node->AST_COND.condition);
+			str_print(str("{"));
+			astlist_print(a, node->AST_COND.consequence);
+			str_print(str("}"));
+			if (node->AST_COND.alternative) {
+				str_print(str(" else"));
+				str_print(str("{"));
+				astlist_print(a, node->AST_COND.alternative);
+				str_print(str("}"));
+			}
+			str_print(str("|"));
 			break;
 		default:
 			str_print(str("Unknown"));
