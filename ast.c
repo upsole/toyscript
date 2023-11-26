@@ -227,6 +227,49 @@ priv AST *parse_grouped_expression(Parser *p)
 	return res;
 }
 
+priv ASTList *parse_function_params(Parser *p)
+{
+	u64 previous_offset = p->arena->used;
+	ASTList	*params = astlist(p->arena);
+	AST	*tmp = NULL;
+	if (p->next_token.type == RPAREN)
+		return (next_token(p), params);
+	next_token(p);
+	if (p->cur_token.type == TK_IDENT)
+		tmp = parse_ident(p);
+	else
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	while (p->next_token.type == COMMA) {
+		next_token(p), next_token(p);
+		if (p->cur_token.type == TK_IDENT) {
+			tmp = parse_ident(p);
+			astpush(params, tmp);
+		}
+		else
+			return (arena_pop_to(p->arena, previous_offset), NULL);
+	}
+	if (!expect_peek(p, RPAREN))
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	return params;
+}
+
+priv AST *parse_function(Parser *p)
+{
+	u64	previous_offset = p->arena->used;
+	AST	*res = ast_alloc(p->arena, (AST) { AST_FN, .AST_FN ={0}});
+	if (!expect_peek(p, LPAREN))
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	ASTList	*params = parse_function_params(p);
+	if (!params) return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_FN.params = params;
+	if (!expect_peek(p, LBRACE))
+		return (arena_pop_to(p->arena, previous_offset), NULL);
+	ASTList	*body = parse_block_statement(p);
+	if (!body) return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_FN.body = body;
+	return res;
+}
+
 priv AST *parse_if_expression(Parser *p)
 {
 	u64 previous_offset = p->arena->used;
@@ -283,6 +326,8 @@ priv PrefixParser PREFIX_PARSERS(TokenType type)
 			return &parse_ident;
 		case LBRACKET:
 			return &parse_list;
+		case TK_FN:
+			return &parse_function;
 		case TRUE:
 		case FALSE:
 			return &parse_bool;
@@ -479,6 +524,14 @@ void ast_aprint(Arena *a, AST *node)
 			str_print(node->AST_INFIX.op);
 			ast_aprint(a, node->AST_INFIX.right);
 			str_print(str(")"));
+			break;
+		case AST_FN:
+			str_print(str("|"));
+			str_print(str("fn"));
+			astlist_print(a, node->AST_FN.params);
+			str_print(str("->"));
+			astlist_print(a, node->AST_FN.body);
+			str_print(str("|"));
 			break;
 		case AST_COND:
 			str_print(str("|"));
