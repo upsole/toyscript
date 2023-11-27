@@ -18,6 +18,7 @@ priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
 priv Element eval_identifier(Arena *a, Namespace *ns, String name);
 priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst);
+priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
 	switch (node->type) {
@@ -50,6 +51,13 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				return lst->head->element;
 			return (Element) { LIST, .LIST = lst };
 		} break;
+		case AST_INDEX: {
+			Element left = eval(a, ns, node->AST_INDEX.left);	
+			if (left.type == ERR) return left;
+			Element index = eval(a, ns, node->AST_INDEX.index);
+			if (index.type == ERR) return index;
+			return eval_index_expression(a, ns, left, index);
+		}
 		case AST_PREFIX: {
 			Element right = eval(a, ns, node->AST_PREFIX.right);
 			if (right.type == ERR) return right;
@@ -115,6 +123,26 @@ priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst)
 		elempush(res, tmp);
 	}
 	return res;
+}
+
+priv Element eval_list_index(Arena *a, Element left, Element index);
+priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index)
+{
+	if (left.type == LIST && index.type == INT)
+		return eval_list_index(a, left, index);
+	return error(CONCAT(a, 
+				str("No index operation implemented for: "),
+				type_str(left.type)));
+}
+priv Element eval_list_index(Arena *a, Element left, Element index)
+{
+	i64	id = index.INT;
+	if (id < 0 || id >= left.LIST->len)
+		return (Element) { ELE_NULL };
+	ElemNode *tmp = left.LIST->head;
+	for (int i = 0; i < id; i++)
+		tmp = tmp->next;
+	return tmp->element;
 }
 
 priv Element eval_bang(Arena *a, Element right);

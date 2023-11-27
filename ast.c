@@ -583,7 +583,7 @@ void ast_aprint(Arena *a, AST *node)
 			break;
 		case AST_INDEX:
 			str_print(str("("));
-			ast_aprint(a, node->AST_INDEX.lst);
+			ast_aprint(a, node->AST_INDEX.left);
 			str_print(str("["));
 			ast_aprint(a, node->AST_INDEX.index);
 			str_print(str("]"));

@@ -58,7 +58,7 @@ struct AST {
 		struct AST_INFIX { AST *left; String op; AST *right; } AST_INFIX;
 		struct AST_COND { AST *condition; ASTList *consequence; ASTList *alternative; } AST_COND;
 		struct AST_CALL { AST *function; ASTList *args; } AST_CALL;
-		struct AST_INDEX { AST *lst; AST *index; } AST_INDEX;
+		struct AST_INDEX { AST *left; AST *index; } AST_INDEX;
 	};
 };
 
