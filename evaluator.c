@@ -20,7 +20,8 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name);
 priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst);
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
-priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args);
+priv Element eval_call(Arena *a, Namespace *ns, Element callee, ElemList *args);
+
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
 	switch (node->type) {
@@ -86,7 +87,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			ElemList *args = eval_list(a, ns, node->AST_CALL.args);
 			if (args->len == 1 && args->head->element.type == ERR)
 				return args->head->element;
-			return eval_function_call(a, ns, fn.FUNCTION, args);
+			return eval_call(a, ns, fn, args);
 		}
 		// LITERALS
 		case AST_INT:
@@ -210,6 +211,18 @@ priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
 		return (Element) { ELE_NULL };
 	}
 }
+
+priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args);
+/* priv Element eval_builtin_call(Arena *a, Namespace *ns, struct BUILTIN fn, ElemList *args); */
+priv Element eval_call(Arena *a, Namespace *ns, Element fn, ElemList *args)
+{
+	if (fn.type == FUNCTION)
+		return eval_function_call(a, ns, fn.FUNCTION, args);
+	/* if (fn.type == BUILTIN) */
+	/* 	return eval_builtin_call(a, ns, fn.BUILTIN, args); */
+	return error(CONCAT(a, str("Not a callable element: "), to_string(a, fn)));
+}
+
 
 priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args)
 {
