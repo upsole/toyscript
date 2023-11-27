@@ -75,7 +75,7 @@ typedef struct Element Element;
 typedef struct Namespace Namespace;
 typedef struct ElemList	ElemList;
 typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, RETURN, FUNCTION, BUILTIN } ElementType;
-typedef Element (*BuiltinFunction)(Arena *a, void *args);
+typedef Element (*BuiltinFunction)(Arena *a, Namespace *ns, ElemList *args);
 struct Element {
 	ElementType type;
 	union {
@@ -88,7 +88,7 @@ struct Element {
 		// TODO ElemArray type used by and val = [] and Tuples
 		struct RETURN { Element *value; } RETURN; 
 		struct FUNCTION { ASTList *params; ASTList *body; Namespace *namespace; } FUNCTION;
-		/* struct BUILTIN { BuiltinFunction *function } BUILTIN; */
+		BuiltinFunction BUILTIN;
 	};
 };
 

@@ -10,6 +10,8 @@ priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable);
 priv ElemList *elemlist(Arena *a);
 priv void elempush(ElemList *lst, Element el);
 
+priv Element BUILTINS(String name);
+
 priv Element error(String msg);
 priv Element *elem_alloc(Arena *a, Element elem);
 // TODO Want to split arenas - One is flushed (eval) and one persists (namespace)
@@ -142,7 +144,8 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name)
 {
 	Bind *res = ns_get(ns, name);
 	if (res && ALWAYS(res->element)) return (*res->element);
-	// TODO resolve builtins
+	Element builtin = BUILTINS(name);
+	if (builtin.type == BUILTIN) return builtin;
 	return error(CONCAT(a, str("Name not found: "), name));
 }
 
@@ -213,16 +216,14 @@ priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
 }
 
 priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args);
-/* priv Element eval_builtin_call(Arena *a, Namespace *ns, struct BUILTIN fn, ElemList *args); */
 priv Element eval_call(Arena *a, Namespace *ns, Element fn, ElemList *args)
 {
 	if (fn.type == FUNCTION)
 		return eval_function_call(a, ns, fn.FUNCTION, args);
-	/* if (fn.type == BUILTIN) */
-	/* 	return eval_builtin_call(a, ns, fn.BUILTIN, args); */
+	if (fn.type == BUILTIN)
+		return fn.BUILTIN(a, ns, args);
 	return error(CONCAT(a, str("Not a callable element: "), to_string(a, fn)));
 }
-
 
 priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args)
 {
@@ -341,6 +342,27 @@ priv Element eval_infix_str(Arena *a, String left, String op, String right)
 priv Element error(String msg)
 {
 	return (Element) { ERR, .ERR = msg };
+}
+
+// ~BUILTINs
+priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args);
+priv Element BUILTINS(String name)
+{
+	if (str_eq(str("len"), name))
+			return (Element) { BUILTIN, .BUILTIN = &builtin_len };
+	return (Element) { ELE_NULL };	
+}
+
+priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args)
+{
+	if (args->len != 1)
+		return error(str_fmt(a, "Wrong number of args for len got %lu, expected 1"));
+	Element only_arg = args->head->element;
+	if (only_arg.type == STR)
+		return (Element) { INT, .INT = only_arg.STR.len };
+	if (only_arg.type == LIST)
+		return (Element) { INT, .INT = only_arg.LIST->len };
+	return error(CONCAT(a, str("Type error: len called with argument of type: "), type_str(only_arg.type)));
 }
 
 // HELPER
