@@ -1,0 +1,36 @@
+val filter = fn(list, predicate) {
+	val res = [];
+	val recur = fn(tmp, item) {
+		if (predicate(item)) {
+			push(res, item);
+		}
+		if (tmp) {
+			recur(cdr(tmp), car(tmp));
+		}
+	};
+	recur(cdr(list), car(list));
+	return res;
+}
+
+val even? = fn(x) {
+	if ((x % 2) == 0) {true} else {false}
+}
+
+val gt? = fn (target) {
+	fn(x) {
+		if (x > target) {
+			return true;
+		} else {
+			return false;
+		}
+	};
+}
+
+print(filter([1, 10, 200, 5], gt?(3)));
+
+print(filter([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], even?));
+
+print(filter(
+		[[], ["a", "b", "c", "d", "e"], [1,2,3], [1]],
+		fn(l) { if (len(l) > 1) {true} else {false} }
+	));

@@ -369,6 +369,8 @@ priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args)
 priv Element *elem_alloc(Arena *a, Element elem)
 {
 	Element	*ptr = arena_alloc(a, sizeof(Element));
+	if (elem.type == STR)
+		elem.STR = str_dup(a, elem.STR);
 	*ptr = elem;
 	return ptr;
 }
@@ -503,7 +505,7 @@ priv u64 hash(String key) // FNV hash
 priv Bind *bind_alloc(Arena *a, String key, Element el, bool is_mutable)
 {
 	Bind *b = arena_alloc(a, sizeof(Bind));
-	b->key = key;
+	b->key = str_dup(a, key);
 	b->element = elem_alloc(a, el);
 	b->mutable = is_mutable;
 	b->next = NULL;

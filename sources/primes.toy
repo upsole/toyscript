@@ -1,0 +1,41 @@
+val lowest_div = fn(x) { # assumes x is odd
+	val recur = fn(x, div) {
+		if (sqr(div) > x) {
+			return x;
+		}
+		if ((x % div) == 0) {
+			return div;
+		}
+		return recur(x, div + 2);
+	};
+	return recur(x, 2);
+};
+val is_prime = fn(x) {
+	if (x < 2) {
+		return false;
+	}
+	if (x == 2) { return true; }
+	if ((x % 2 == 0)) { return false; }
+	if (x == lowest_div(x)) {
+		return true;
+	};
+	return false;
+};
+
+val main = fn(x) {
+	val recur = fn(begin, end) {
+		if (begin == end) {
+			return 0;
+		}
+		print(begin, " ", is_prime(begin));
+		return recur(begin + 1, end);
+	}
+	return recur(0, x);
+}
+
+main(7444);
+main(15);
+main(15);
+main(15);
+main(15);
+main(15);

@@ -422,6 +422,12 @@ priv Precedence PRECEDENCE(TokenType type)
 AST *ast_alloc(Arena *a, AST node)
 {
 	AST	*ptr = arena_alloc(a, sizeof(AST));
+	if (node.type == AST_STR || node.type == AST_IDENT)
+		node.AST_STR = str_dup(a, node.AST_STR);
+	if (node.type == AST_VAL)
+		node.AST_VAL.name = str_dup(a, node.AST_VAL.name);
+	if (node.type == AST_VAR)
+		node.AST_VAR.name = str_dup(a, node.AST_VAR.name);
 	*ptr = node;
 	return ptr;
 }

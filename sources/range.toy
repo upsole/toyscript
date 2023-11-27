@@ -1,0 +1,12 @@
+val range = fn(begin, end) {
+	val new_list = [];
+	val recur = fn(x) {
+		push(new_list, x);
+		if (x < end) {
+			recur(x + 1);
+		}
+	}
+	recur(begin);
+	return new_list;
+}
+print(range(0, 5));
