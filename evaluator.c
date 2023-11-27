@@ -346,11 +346,24 @@ priv Element error(String msg)
 
 // ~BUILTINs
 priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args);
+priv Element builtin_print(Arena *a, Namespace *ns, ElemList *args);
 priv Element BUILTINS(String name)
 {
+	if (str_eq(str("print"), name))
+			return (Element) { BUILTIN, .BUILTIN = &builtin_print };
 	if (str_eq(str("len"), name))
 			return (Element) { BUILTIN, .BUILTIN = &builtin_len };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element builtin_print(Arena *a, Namespace *ns, ElemList *args)
+{
+	u64	previous_offset = a->used;
+	for (ElemNode *tmp = args->head; tmp; tmp = tmp->next)
+		str_print(to_string(a, tmp->element));
+	arena_pop_to(a, previous_offset);
+	str_print(str("\n"));
+	return (Element) { ELE_NULL };
 }
 
 priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args)
