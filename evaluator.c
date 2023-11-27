@@ -14,11 +14,13 @@ priv Element error(String msg);
 priv Element *elem_alloc(Arena *a, Element elem);
 // TODO Want to split arenas - One is flushed (eval) and one persists (namespace)
 priv Element eval_program(Arena *a, Namespace *ns, AST *node);
+priv Element eval_block(Arena *a, Namespace *ns, ASTList *list);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
 priv Element eval_identifier(Arena *a, Namespace *ns, String name);
 priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst);
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
+priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
 	switch (node->type) {
@@ -70,6 +72,8 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			if (right.type == ERR) return right;
 			return eval_infix_expression(a, left, node->AST_INFIX.op, right);
 		}
+		case AST_COND: 
+			return eval_cond_expression(a, ns, node);
 		// LITERALS
 		case AST_INT:
 			return (Element) { INT, .INT =  node->AST_INT.value  };
@@ -85,6 +89,8 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 
 priv Element eval_program(Arena *a, Namespace *ns, AST *node)
 {
+	if (NEVER(node->type != AST_PROGRAM))
+		return (Element) { ELE_NULL };
 	Element	res = {0};
 	for (ASTNode *tmp = node->AST_LIST->head; tmp; tmp = tmp->next) {
 		res = eval(a, ns, tmp->ast);
@@ -92,6 +98,23 @@ priv Element eval_program(Arena *a, Namespace *ns, AST *node)
 			if (NEVER(!res.RETURN.value))
 				return (Element) { ELE_NULL };
 			return (*res.RETURN.value);
+		} 
+		if (res.type == ERR) {
+			return res;
+		} 
+	}
+	return res;
+}
+
+priv Element eval_block(Arena *a, Namespace *ns, ASTList *list)
+{
+	Element	res = {0};
+	for (ASTNode *tmp = list->head; tmp; tmp = tmp->next) {
+		res = eval(a, ns, tmp->ast);
+		if (res.type == RETURN) {
+			if (NEVER(!res.RETURN.value))
+				return (Element) { ELE_NULL };
+			return res; // Return without unwrapping so program ends - this is the main difference with eval_program
 		} 
 		if (res.type == ERR) {
 			return res;
@@ -134,6 +157,7 @@ priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Elemen
 				str("No index operation implemented for: "),
 				type_str(left.type)));
 }
+
 priv Element eval_list_index(Arena *a, Element left, Element index)
 {
 	i64	id = index.INT;
@@ -143,6 +167,33 @@ priv Element eval_list_index(Arena *a, Element left, Element index)
 	for (int i = 0; i < id; i++)
 		tmp = tmp->next;
 	return tmp->element;
+}
+
+priv bool is_truthy(Element e)
+{
+	switch (e.type) {
+		case ELE_NULL:
+			return false;
+		case INT:
+			return (e.INT != 0);
+		case BOOL:
+			return e.BOOL;
+		default:
+			return true;
+	}
+}
+priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
+{
+	if (NEVER(node->type != AST_COND))
+		return (Element) { ELE_NULL };
+	Element condition = eval(a, ns, node->AST_COND.condition);
+	if (is_truthy(condition)) {
+		return eval_block(a, ns, node->AST_COND.consequence);
+	} else if (node->AST_COND.alternative) {
+		return eval_block(a, ns, node->AST_COND.alternative);
+	} else {
+		return (Element) { ELE_NULL };
+	}
 }
 
 priv Element eval_bang(Arena *a, Element right);
