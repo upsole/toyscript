@@ -240,6 +240,7 @@ priv ASTList *parse_function_params(Parser *p)
 		tmp = parse_ident(p);
 	else
 		return (arena_pop_to(p->arena, previous_offset), NULL);
+	astpush(params, tmp);
 	while (p->next_token.type == COMMA) {
 		next_token(p), next_token(p);
 		if (p->cur_token.type == TK_IDENT) {

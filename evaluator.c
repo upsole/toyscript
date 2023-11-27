@@ -14,13 +14,13 @@ priv Element error(String msg);
 priv Element *elem_alloc(Arena *a, Element elem);
 // TODO Want to split arenas - One is flushed (eval) and one persists (namespace)
 priv Element eval_program(Arena *a, Namespace *ns, AST *node);
-priv Element eval_block(Arena *a, Namespace *ns, ASTList *list);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
 priv Element eval_identifier(Arena *a, Namespace *ns, String name);
 priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst);
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
+priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args);
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
 	switch (node->type) {
@@ -53,6 +53,11 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				return lst->head->element;
 			return (Element) { LIST, .LIST = lst };
 		} break;
+		case AST_FN: {
+			ASTList *params = node->AST_FN.params;
+			ASTList *body = node->AST_FN.body;
+			return (Element) { FUNCTION, .FUNCTION = { params, body, ns } };
+		} break;
 		case AST_INDEX: {
 			Element left = eval(a, ns, node->AST_INDEX.left);	
 			if (left.type == ERR) return left;
@@ -74,6 +79,15 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		}
 		case AST_COND: 
 			return eval_cond_expression(a, ns, node);
+		case AST_CALL: {
+			Element fn = eval(a, ns, node->AST_CALL.function);
+			if (fn.type == ERR) return fn;
+			Namespace *func_namespace = (fn.type == FUNCTION) ? fn.FUNCTION.namespace : ns;
+			ElemList *args = eval_list(a, ns, node->AST_CALL.args);
+			if (args->len == 1 && args->head->element.type == ERR)
+				return args->head->element;
+			return eval_function_call(a, ns, fn.FUNCTION, args);
+		}
 		// LITERALS
 		case AST_INT:
 			return (Element) { INT, .INT =  node->AST_INT.value  };
@@ -182,6 +196,7 @@ priv bool is_truthy(Element e)
 			return true;
 	}
 }
+
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
 {
 	if (NEVER(node->type != AST_COND))
@@ -194,6 +209,32 @@ priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
 	} else {
 		return (Element) { ELE_NULL };
 	}
+}
+
+priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args)
+{
+	if (fn.params->len != args->len) 
+		return error(str_fmt(a, "Invalid number of arguments: Got %lu, expected %lu",
+					args->len, fn.params->len));
+
+	Arena *call_arena = arena(MB(1));
+	Namespace *call_ns = ns_inner(call_arena, ns, 16);
+
+	ElemNode *el_node = args->head;
+	for (ASTNode *ast_node = fn.params->head; ast_node; ast_node = ast_node->next) {
+		ns_put(call_ns, ast_node->ast->AST_STR, el_node->element, MUTABLE);
+		el_node = el_node->next;
+	}
+
+	Element block = eval_block(call_arena, call_ns, fn.body);
+	if (block.type == ERR) {
+		Element err = (*elem_alloc(a, block));
+		arena_free(&call_arena);
+		return err;
+	}
+	Element res = (*elem_alloc(a, block));
+	arena_free(&call_arena);
+	return res;
 }
 
 priv Element eval_bang(Arena *a, Element right);
@@ -312,6 +353,8 @@ String	to_string(Arena *a, Element e)
 			return e.STR;
 		case LIST:
 			return list_to_string(a, e.LIST);
+		case FUNCTION:
+			return str_fmt(a, "fn(namespace: %p)", e.FUNCTION.namespace);
 		case ERR:
 			return e.ERR;
 		default:

@@ -87,7 +87,7 @@ struct Element {
 		ElemList	*LIST;
 		// TODO ElemArray type used by and val = [] and Tuples
 		struct RETURN { Element *value; } RETURN; 
-		/* struct FUNCTION { ASTList *params, ASTList *body, Namespace *namespace } FUNCTION; */
+		struct FUNCTION { ASTList *params; ASTList *body; Namespace *namespace; } FUNCTION;
 		/* struct BUILTIN { BuiltinFunction *function } BUILTIN; */
 	};
 };
