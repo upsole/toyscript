@@ -10,9 +10,9 @@ priv InfixParser INFIX_PARSERS(TokenType type);
 priv Precedence PRECEDENCE(TokenType type);
 
 // HEADERS
-priv ASTList *astlist(Arena *a);
-priv void astpush(ASTList *l, AST *ast);
-priv AST *ast_alloc(Arena *a, AST node); 
+ASTList *astlist(Arena *a);
+void astpush(ASTList *l, AST *ast);
+AST *ast_alloc(Arena *a, AST node); 
 priv void next_token(Parser *p);
 priv bool expect_peek(Parser *p, TokenType t);
 priv void parser_error(Parser *p, String msg);
@@ -203,7 +203,7 @@ priv ASTList *parse_many(Parser *p, TokenType end_type)
 		astpush(lst, parse_expression(p, LOWEST));
 	}
 	if (!expect_peek(p, end_type)) {
-		arena_pop_to(p->arena, previous_offset); // Failed to build list, resetting arena to previous state XXX test this
+		arena_pop_to(p->arena, previous_offset); // Failed to build list, resetting arena to previous state
 		return NULL;
 	}
 	return lst;
@@ -432,7 +432,7 @@ AST *ast_alloc(Arena *a, AST node)
 	return ptr;
 }
 
-priv ASTList *astlist(Arena *a)
+ASTList *astlist(Arena *a)
 {
 	ASTList *l = arena_alloc(a, sizeof(ASTList));
 	l->arena = a;
@@ -441,7 +441,7 @@ priv ASTList *astlist(Arena *a)
 	return l;
 }
 
-priv void astpush(ASTList *l, AST *ast)
+void astpush(ASTList *l, AST *ast)
 {
 	ASTNode	*node = arena_alloc(l->arena, sizeof(ASTNode));
 	node->ast = ast;
@@ -488,6 +488,7 @@ priv void parser_error(Parser *p, String msg)
 	strpush(p->errors, msg);
 }
 
+// STDOUT
 void parser_print_errors(Parser *p)
 {
 	str_print(str("Parser has errors.\n"));
@@ -495,108 +496,112 @@ void parser_print_errors(Parser *p)
 		str_print(tmp->string), str_print(str("\n"));
 }
 
-priv void astlist_print(Arena *a, ASTList *lst)
+String astlist_str(Arena *a, ASTList *lst);
+String ast_str(Arena *a, AST *node)
 {
-	str_print(str("["));
-	for (ASTNode *tmp = lst->head; tmp; tmp = tmp->next) {
-		ast_aprint(a, tmp->ast); 
-		if (tmp->next) str_print(str(" "));
+	switch (node->type) {
+		case AST_INT:
+			return str_fmt(a, "%ld", node->AST_INT.value);
+		case AST_BOOL:
+			return node->AST_BOOL.value ? str("true") : str("false");
+		case AST_IDENT:
+		case AST_STR:
+			return node->AST_STR;
+		case AST_VAL:
+			return CONCAT(a, 
+					str("|"), node->AST_VAL.name, 
+					str("="), 
+					ast_str(a, node->AST_VAL.value), str("|")
+					);
+		case AST_VAR:
+			return CONCAT(a, 
+					str("|"), node->AST_VAR.name, 
+					str("="), 
+					ast_str(a, node->AST_VAR.value), str("|")
+					);
+		case AST_RETURN:
+			return CONCAT(a, str("|return "), 
+					ast_str(a, node->AST_RETURN.value),
+					str("|"));
+		case AST_PROGRAM:
+		case AST_LIST:
+			return astlist_str(a, node->AST_LIST);
+		case AST_FN:
+			return str_concat(a, 
+					astlist_str(a, node->AST_FN.params), 
+					astlist_str(a, node->AST_FN.body));
+		case AST_PREFIX:
+			return CONCAT(a, str("("), 
+					node->AST_PREFIX.op, 
+					ast_str(a, node->AST_PREFIX.right), str(")"));
+		case AST_INFIX:
+			return CONCAT(a, str("("),
+					ast_str(a, node->AST_INFIX.left), 
+					node->AST_INFIX.op, 
+					ast_str(a, node->AST_INFIX.right), str(")"));
+		case AST_COND:
+			return CONCAT(a, str("|if"),
+					ast_str(a, node->AST_COND.condition), str("{"),
+					astlist_str(a, node->AST_COND.consequence), str("}"),
+					(node->AST_COND.alternative) ? (CONCAT(a, str(" else{"), astlist_str(a, node->AST_COND.alternative), str("}"))) : str(""),
+					str("|")
+					);
+		case AST_CALL:
+			return CONCAT(a, str("("), 
+					ast_str(a, node->AST_CALL.function),
+					str("<"),
+					astlist_str(a, node->AST_CALL.args),
+					str(">"), str(")")
+					);
+		case AST_INDEX:
+			return CONCAT(a, str("("), 
+					ast_str(a, node->AST_INDEX.left), str("["),
+					ast_str(a, node->AST_INDEX.index), str("])"));
 	}
-	str_print(str("]"));
+	return (NEVER(1), str(""));
 }
 
+String astlist_str(Arena *a, ASTList *lst)
+{
+	if (!lst) return str("");
+	char *buf = arena_alloc(a, 1);
+	buf[0] = '[';
+	u64 len = 1;
+	for (ASTNode *cursor = lst->head; cursor; cursor = cursor->next) {
+		String tmp = ast_str(a, cursor->ast);
+		arena_alloc(a, tmp.len);
+		memcpy(buf + len, tmp.buf, tmp.len);
+		len += tmp.len;
+		if (cursor->next) {
+			tmp = str(", ");
+			arena_alloc(a, tmp.len);
+			memcpy(buf + len, tmp.buf, tmp.len);
+			len += tmp.len;
+		}
+	}
+	String tmp = str("]");
+	arena_alloc(a, tmp.len);
+	memcpy(buf + len, tmp.buf, tmp.len);
+	len += tmp.len;
+	return (String){ buf, len };
+}
 
 void ast_aprint(Arena *a, AST *node)
 {
-	switch (node->type) {
-		case AST_VAL:
-			str_print(str("|"));
-			str_print(node->AST_VAL.name);
-			str_print(str("="));
-			ast_aprint(a, node->AST_VAL.value);
-			str_print(str("|"));
-			break;
-		case AST_VAR:
-			str_print(str("|"));
-			str_print(node->AST_VAR.name);
-			str_print(str("="));
-			ast_aprint(a, node->AST_VAR.value);
-			str_print(str("|"));
-			break;
-		case AST_RETURN:
-			str_print(str("|"));
-			str_print(str("return "));
-			ast_aprint(a, node->AST_RETURN.value);
-			str_print(str("|"));
-			break;
-		case AST_INT:
-			str_print(str_fmt(a, "%ld", node->AST_INT.value));
-			break;
-		case AST_BOOL:
-			if (node->AST_BOOL.value) str_print(str("TRUE"));
-			else str_print(str("FALSE"));
-			break;
-		case AST_STR:
-		case AST_IDENT:
-			str_print(node->AST_STR);
-			break;
-		case AST_PROGRAM:
-		case AST_LIST:
-			astlist_print(a, node->AST_LIST);
-			break;
-		case AST_PREFIX:
-			str_print(str("("));
-			str_print(node->AST_PREFIX.op);
-			ast_aprint(a, node->AST_PREFIX.right);
-			str_print(str(")"));
-			break;
-		case AST_INFIX:
-			str_print(str("("));
-			ast_aprint(a, node->AST_INFIX.left);
-			str_print(node->AST_INFIX.op);
-			ast_aprint(a, node->AST_INFIX.right);
-			str_print(str(")"));
-			break;
-		case AST_FN:
-			str_print(str("|"));
-			str_print(str("fn"));
-			astlist_print(a, node->AST_FN.params);
-			str_print(str("->"));
-			astlist_print(a, node->AST_FN.body);
-			str_print(str("|"));
-			break;
-		case AST_CALL:
-			str_print(str("("));
-			ast_aprint(a, node->AST_CALL.function);
-			str_print(str("<"));
-			astlist_print(a, node->AST_CALL.args);
-			str_print(str(">"));
-			str_print(str(")"));
-			break;
-		case AST_COND:
-			str_print(str("|"));
-			str_print(str("if"));
-			ast_aprint(a, node->AST_COND.condition);
-			str_print(str("{"));
-			astlist_print(a, node->AST_COND.consequence);
-			str_print(str("}"));
-			if (node->AST_COND.alternative) {
-				str_print(str(" else"));
-				str_print(str("{"));
-				astlist_print(a, node->AST_COND.alternative);
-				str_print(str("}"));
-			}
-			str_print(str("|"));
-			break;
-		case AST_INDEX:
-			str_print(str("("));
-			ast_aprint(a, node->AST_INDEX.left);
-			str_print(str("["));
-			ast_aprint(a, node->AST_INDEX.index);
-			str_print(str("]"));
-			str_print(str(")"));
-			break;
-		default:
-			str_print(str("Unknown"));
-	}
+	str_print(ast_str(a, node));
+}
+
+String	asttype_str(ASTType type)
+{
+	String typenames[] = {
+		str("AST_VAL"), str("AST_VAR"), str("AST_RETURN"),
+		str("AST_IDENT"), str("AST_INT"), str("AST_BOOL"),
+		str("AST_BOOL"), str("AST_STR"), str("AST_LIST"),
+		str("AST_FN"), str("AST_PREFIX"), str("AST_INFIX"),
+		str("AST_COND"), str("AST_CALL"), str("AST_INDEX"),
+		str("AST_PROGRAM")
+	};
+	if (NEVER(type < 0 || type > arrlen(typenames)))
+		return str("Unkown ast type");
+	return typenames[type];
 }

@@ -14,7 +14,6 @@ priv Element BUILTINS(String name);
 
 priv Element error(String msg);
 priv Element *elem_alloc(Arena *a, Element elem);
-// TODO Want to split arenas - One is flushed (eval) and one persists (namespace)
 priv Element eval_program(Arena *a, Namespace *ns, AST *node);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);

@@ -125,6 +125,9 @@ Token 	lexer_token(Lexer *l);
 String	token_str(TokenType type);
 
 void 	ast_aprint(Arena *a, AST *node);
+String	asttype_str(ASTType type);
+String 	ast_str(Arena *a, AST *node);
+
 Parser	*parser(Arena *a, Lexer *l);
 AST		*parse_program(Parser *p);
 void	parser_print_errors(Parser *p);

@@ -1,11 +1,15 @@
 #ifndef TESTS_H
 # define TESTS_H
-# ifndef EXIT_ON_FAIL
-# define EXIT_ON_FAIL 0
+
+# ifdef NO_EXIT_ON_FAIL
+# 	define TEST(ex) (ex)
+# else
+# 	define TEST(ex) (assert(!(ex)), ex)
+# endif
+
 # include "../base.h"
 # include "../toyscript.h"
 # include <stdlib.h>
-# endif
 
 typedef struct TestResult {
 	bool	passed;

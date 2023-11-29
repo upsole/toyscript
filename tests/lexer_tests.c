@@ -21,7 +21,7 @@ int main(int ac, char **av)
 	for (int i = 1; i < ac; i++) {
 		int test_id = atoi(av[i]);
 		if (test_id >= arrlen(tests))
-			str_print(str_fmt(a, "Test %d not found.\n", i)), exit(1);
+			str_print(str_fmt(a, "Test %d not found.\n", test_id)), exit(1);
 		if (!run_test(a, tests[test_id]))
 			str_print(str("\t TEST LEXER FAILURE\n"));
 	}
@@ -54,16 +54,16 @@ TestResult all_tokens_test(Arena *arena)
 	Token t = lexer_token(l);
 	int i = 0;
 	while (t.type != END) {
-		if (i >= arrlen(expected))
+		if (TEST(i >= arrlen(expected)))
 			return fail(str("End reached before expected"));
-		if (expected[i].type != t.type) {
+		if (TEST(expected[i].type != t.type)) {
 			return fail(CONCAT(arena, 
 						str("Expected: "), token_str(t.type),
 						str("\nActual: "), token_str(t.type),
 						str("\nToken type missmatch")
 						));
 		}
-		if (!str_eq(expected[i].lit, t.lit)) {
+		if (TEST(!str_eq(expected[i].lit, t.lit))) {
 			return fail(CONCAT(arena,
 						str("Expected: "), expected[i].lit,
 						str("\nActual: "), t.lit,
@@ -91,16 +91,16 @@ TestResult skip_comments_test(Arena *arena)
 	Token t = lexer_token(l);
 	int i = 0;
 	while (t.type != END) {
-		if (i >= arrlen(expected)) 
+		if (TEST(i >= arrlen(expected))) 
 			return fail(str("End reached before expected"));
-		if (expected[i].type != t.type) {
+		if (TEST(expected[i].type != t.type)) {
 			return fail(CONCAT(arena, 
 						str("Expected: "), token_str(t.type),
 						str("\nActual: "), token_str(t.type),
 						str("\nToken type missmatch")
 						));
 		}
-		if (!str_eq(expected[i].lit, t.lit)) {
+		if (TEST(!str_eq(expected[i].lit, t.lit))) {
 			return fail(CONCAT(arena,
 						str("Expected: "), expected[i].lit,
 						str("\nActual: "), t.lit,

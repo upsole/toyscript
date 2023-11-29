@@ -5,7 +5,7 @@ It comes with builtin support for lists, strings and first-class functions.
 * Running `toyscript` without any arguments will start the repl. It will evaluate a file if a filename is provided.
 * `build.sh` also allows for the tests to be run: `./build.sh test` will run all of them, `parser`, `lexer` or `eval` to run just  
 a section. If you append a test number after one of those, it will run just that single test.
-* See `tests/toy_sources` for toyscript examples
+* See `sources` for toyscript examples
 ```
 val range = fn(begin, end) { # Generate a range of integers
         var new_list = [];

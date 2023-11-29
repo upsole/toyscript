@@ -3,6 +3,7 @@
 cflags="-Wall -Werror -Wimplicit-fallthrough "
 dev="-Wno-unused-variable -Wno-unused-function -Wno-unused-value -g3"
 src="base.c lexer.c ast.c evaluator.c"
+exit_on_fail=""
 args="$cflags $dev $src -DDEV_DEBUG"
 cc=gcc
 ### 
@@ -14,12 +15,13 @@ compile()
 
 compile_tests_lexer()
 {
-	$cc $args tests/lexer_tests.c tests/test_utils.c -o tests/lexer_tests.out
+	$cc $args $exit_on_fail tests/lexer_tests.c tests/test_utils.c -o tests/lexer_tests.out;
 }
 
-# compile_tests_parser()
-# {
-# }
+compile_tests_parser()
+{
+	$cc $args $exit_on_fail tests/parser_tests.c tests/test_utils.c -o tests/parser_tests.out;
+}
 
 # compile_tests_eval()
 # {
@@ -34,13 +36,34 @@ test_launcher()
 {
 	case $1 in
 		l|lexer)
-			compile_tests_lexer;
-			[[ $? -eq 0 ]] && ./lexer_tests.out ${@:2};;
+			case $2 in
+				no_assert|na)
+					exit_on_fail="-DNO_EXIT_ON_FAIL";
+					compile_tests_lexer;
+					[[ $? -eq 0 ]] && ./tests/lexer_tests.out ${@:3};;
+				*)
+					compile_tests_lexer;
+					[[ $? -eq 0 ]] && ./tests/lexer_tests.out ${@:2};;
+			esac;;
+		p|parser)
+			case $2 in
+				no_assert|na)
+					exit_on_fail="-DNO_EXIT_ON_FAIL";
+					compile_tests_parser;
+					[[ $? -eq 0 ]] && ./tests/parser_tests.out ${@:3};;
+				*)
+					compile_tests_parser;
+					[[ $? -eq 0 ]] && ./tests/parser_tests.out ${@:2};;
+			esac;;
 		*)
+			case $1 in
+				no_assert|na)
+					exit_on_fail="-DNO_EXIT_ON_FAIL";;
+			esac
 			compile_tests_lexer;
 			[[ $? -eq 0 ]] && ./tests/lexer_tests.out;
-			# compile_tests_parser;
-			# [[ $? -eq 0 ]] && ./tests/parser_test;
+			compile_tests_parser;
+			[[ $? -eq 0 ]] && ./tests/parser_tests.out;;
 			# compile_tests_eval;
 			# [[ $? -eq 0 ]] && ./tests/eval_test;;
 	esac
