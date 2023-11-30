@@ -6,6 +6,7 @@
 priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap); 
 priv Bind *ns_get(Namespace *ns, String key);
 priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
+priv Namespace *ns_copy(Arena *a, Namespace *ns);
 
 priv ElemList *elemlist(Arena *a);
 priv void elempush(ElemList *lst, Element el);
@@ -14,6 +15,8 @@ priv Element BUILTINS(String name);
 
 priv Element error(String msg);
 priv Element *elem_alloc(Arena *a, Element elem);
+ASTList *astlist_copy(Arena *a, ASTList *lst);
+
 priv Element eval_program(Arena *a, Namespace *ns, AST *node);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
@@ -88,7 +91,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			ElemList *args = eval_list(a, ns, node->AST_CALL.args);
 			if (args->len == 1 && args->head->element.type == ERR)
 				return args->head->element;
-			return eval_call(a, ns, fn, args);
+			return eval_call(a, func_namespace, fn, args);
 		}
 		// LITERALS
 		case AST_INT:
@@ -230,7 +233,7 @@ priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, Ele
 		return error(str_fmt(a, "Invalid number of arguments: Got %lu, expected %lu",
 					args->len, fn.params->len));
 
-	Arena *call_arena = arena(MB(1));
+	Arena	*call_arena = arena(MB(1));
 	Namespace *call_ns = ns_inner(call_arena, ns, 16);
 
 	ElemNode *el_node = args->head;
@@ -238,16 +241,16 @@ priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, Ele
 		ns_put(call_ns, ast_node->ast->AST_STR, el_node->element, MUTABLE);
 		el_node = el_node->next;
 	}
-
-	Element block = eval_block(call_arena, call_ns, fn.body);
-	if (block.type == ERR) {
-		Element err = (*elem_alloc(a, block));
+	Element res = eval_block(a, call_ns, fn.body);
+	if (res.type == RETURN) {
+		Element *return_value = elem_alloc(a, (*res.RETURN.value));
 		arena_free(&call_arena);
-		return err;
+		return (*return_value);
 	}
-	Element res = (*elem_alloc(a, block));
+	Element *copy = elem_alloc(a, res);
 	arena_free(&call_arena);
-	return res;
+	return (*copy);
+	/* return eval_block(a, call_ns, fn.body); */
 }
 
 priv Element eval_bang(Arena *a, Element right);
@@ -368,7 +371,7 @@ priv Element builtin_print(Arena *a, Namespace *ns, ElemList *args)
 priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args)
 {
 	if (args->len != 1)
-		return error(str_fmt(a, "Wrong number of args for len got %lu, expected 1"));
+		return error(str_fmt(a, "Wrong number of args for len: got %lu, expected 1", args->len));
 	Element only_arg = args->head->element;
 	if (only_arg.type == STR)
 		return (Element) { INT, .INT = only_arg.STR.len };
@@ -383,6 +386,13 @@ priv Element *elem_alloc(Arena *a, Element elem)
 	Element	*ptr = arena_alloc(a, sizeof(Element));
 	if (elem.type == STR)
 		elem.STR = str_dup(a, elem.STR);
+	if (elem.type == RETURN)
+		elem.RETURN.value = elem_alloc(a, *elem.RETURN.value);
+	if (elem.type == FUNCTION) {
+		elem.FUNCTION.params = astlist_copy(a, elem.FUNCTION.params);
+		elem.FUNCTION.body = astlist_copy(a, elem.FUNCTION.body);
+		elem.FUNCTION.namespace = ns_copy(a, elem.FUNCTION.namespace);
+	}
 	*ptr = elem;
 	return ptr;
 }
@@ -400,6 +410,8 @@ String	to_string(Arena *a, Element e)
 			return (e.BOOL) ? str("true") : str("false");
 		case STR:
 			return e.STR;
+		case RETURN:
+			return to_string(a, (*e.RETURN.value));
 		case LIST:
 			return list_to_string(a, e.LIST);
 		case FUNCTION:
@@ -555,3 +567,28 @@ priv Bind *ns_get(Namespace *ns, String key)
 	if (!res && ns->parent) res = ns_get(ns->parent, key);
 	return res;
 }
+
+priv Namespace *ns_copy(Arena *a, Namespace *ns)
+{
+	Namespace *res = ns_create(a, ns->cap);
+	for (int i = 0; i < ns->cap; i++) {
+		if (ns->values[i]) {
+			res->values[i] =
+			    bind_alloc(res->arena, ns->values[i]->key,
+				       (*ns->values[i]->element), ns->values[i]->mutable);
+			res->len++;
+			if (ns->values[i]->next) {
+				for (Bind *ns_cursor = ns->values[i]->next;
+				     ns_cursor; ns_cursor = ns_cursor->next) {
+					Bind *p = bind_alloc(a, ns_cursor->key,
+							     (*ns_cursor->element), ns_cursor->mutable);
+					p->next = res->values[i];
+					res->values[i] = p;
+					res->len++;
+				}
+			}
+		}
+	}
+	return res;
+}
+

@@ -56,7 +56,7 @@ typedef struct StrList {
 // BASE API
 
 #define str(lit) ((String) { lit, (sizeof(lit) - 1) })
-#define cstr(s) ((String) { s, (strlen(s) - 1) })
+#define cstr(s) ((String) { s, (strlen(s)) })
 #define _NUMARGS(...) (sizeof((String[]){__VA_ARGS__}) / sizeof(String))
 #define CONCAT(a, ...) (str_concat_n(a, _NUMARGS(__VA_ARGS__), __VA_ARGS__))
 

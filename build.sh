@@ -23,9 +23,10 @@ compile_tests_parser()
 	$cc $args $exit_on_fail tests/parser_tests.c tests/test_utils.c -o tests/parser_tests.out;
 }
 
-# compile_tests_eval()
-# {
-# }
+compile_tests_evaluator()
+{
+	$cc $args $exit_on_fail tests/evaluator_tests.c tests/test_utils.c -o tests/evaluator_tests.out;
+}
 
 compile_demo()
 {
@@ -55,6 +56,16 @@ test_launcher()
 					compile_tests_parser;
 					[[ $? -eq 0 ]] && ./tests/parser_tests.out ${@:2};;
 			esac;;
+		e|eval)
+			case $2 in
+				no_assert|na)
+					exit_on_fail="-DNO_EXIT_ON_FAIL";
+					compile_tests_evaluator;
+					[[ $? -eq 0 ]] && ./tests/evaluator_tests.out ${@:3};;
+				*)
+					compile_tests_evaluator;
+					[[ $? -eq 0 ]] && ./tests/evaluator_tests.out ${@:2};;
+			esac;;
 		*)
 			case $1 in
 				no_assert|na)
@@ -63,9 +74,9 @@ test_launcher()
 			compile_tests_lexer;
 			[[ $? -eq 0 ]] && ./tests/lexer_tests.out;
 			compile_tests_parser;
-			[[ $? -eq 0 ]] && ./tests/parser_tests.out;;
-			# compile_tests_eval;
-			# [[ $? -eq 0 ]] && ./tests/eval_test;;
+			[[ $? -eq 0 ]] && ./tests/parser_tests.out;
+			compile_tests_evaluator;
+			[[ $? -eq 0 ]] && ./tests/evaluator_tests.out;;
 	esac
 }
 

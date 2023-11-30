@@ -4,3 +4,4 @@ TODO
 toyscript
 main.c
 *.out
+.gdbinit

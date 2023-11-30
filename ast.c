@@ -432,6 +432,8 @@ AST *ast_alloc(Arena *a, AST node)
 	return ptr;
 }
 
+
+
 ASTList *astlist(Arena *a)
 {
 	ASTList *l = arena_alloc(a, sizeof(ASTList));
@@ -459,6 +461,14 @@ void astpush(ASTList *l, AST *ast)
 	l->tail = node;
 	l->len++;
 }
+
+ASTList *astlist_copy(Arena *a, ASTList *lst)
+{
+	ASTList *new = astlist(a);
+	for (ASTNode *tmp = lst->head; tmp; tmp = tmp->next)
+		astpush(new, tmp->ast);
+	return new;
+}	 
 
 // PARSER INTERNALS
 priv void next_token(Parser *p)
