@@ -37,7 +37,6 @@ priv int exec_file(char *filename)
 }
 
 priv String read_stdin(Arena *a);
-priv void print_tokens(Arena *a, Lexer *l);
 priv int repl()
 {
 	String input = {0};

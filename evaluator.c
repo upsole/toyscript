@@ -591,4 +591,3 @@ priv Namespace *ns_copy(Arena *a, Namespace *ns)
 	}
 	return res;
 }
-

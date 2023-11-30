@@ -40,12 +40,6 @@ priv char lexer_peek(Lexer *l)
 		return l->input.buf[l->next];
 }
 
-priv void lexer_skip_comment(Lexer *l)
-{
-	while (l->ch != '\n')
-		lexer_read(l);
-}
-
 Token lexer_token(Lexer *l)
 {
 	Token t = {0};
