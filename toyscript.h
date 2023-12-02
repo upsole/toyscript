@@ -88,7 +88,6 @@ struct Element {
 		String		STR;
 		ElemList	*LIST;
 		ElemArray	*ARRAY;
-		// TODO ElemArray type used by and val = [] and Tuples
 		struct RETURN { Element *value; } RETURN; 
 		struct FUNCTION { ASTList *params; ASTList *body; Namespace *namespace; } FUNCTION;
 		BuiltinFunction BUILTIN;
