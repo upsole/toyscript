@@ -445,8 +445,6 @@ AST *ast_alloc(Arena *a, AST node)
 	return ptr;
 }
 
-
-
 ASTList *astlist(Arena *a)
 {
 	ASTList *l = arena_alloc(a, sizeof(ASTList));

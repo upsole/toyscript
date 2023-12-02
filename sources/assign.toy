@@ -1,0 +1,16 @@
+var x = 5;
+x = 10;
+print(x);
+
+var h = [0,1,2,3,4,5];
+print(h);
+h = [10,11,12];
+print(h);
+
+var function1 = fn(x, y) { return x + y; }
+print(function1(5, 10));
+function1 = fn(x) { return x * x; }
+print(function1(20));
+#print(function1(20, 20));
+val y = 10;
+y = 13;

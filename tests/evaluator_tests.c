@@ -3,7 +3,6 @@
 TestResult test_integer_eval(Arena *a);
 TestResult test_string_eval(Arena *a);
 TestResult test_string_concat(Arena *a);
-/* TestResult test_list_eval(Arena *a); */
 TestResult test_array_eval(Arena *a);
 TestResult test_index_eval(Arena *a);
 TestResult test_bang_eval(Arena *a);
@@ -14,6 +13,7 @@ TestResult test_val_eval(Arena *a);
 TestResult test_function_eval(Arena *a);
 TestResult test_function_call(Arena *a);
 TestResult test_builtin_function(Arena *a);
+TestResult test_assignment(Arena *a);
 
 int main(int ac, char **av)
 {
@@ -32,7 +32,8 @@ int main(int ac, char **av)
 			{str("VALS"), &test_val_eval},
 			{str("FUNCTION"), &test_function_eval},
 			{str("CALL"), &test_function_call},
-			{str("BUILTIN"), &test_builtin_function}
+			{str("BUILTIN"), &test_builtin_function},
+			{str("ASSIGNMENT"), &test_assignment},
 	};
 
 	if (ac < 2) {
@@ -299,12 +300,29 @@ TestResult test_val_eval(Arena *a)
 	return pass();
 }
 
+AST *ast_alloc(Arena *a, AST node);
+ASTList *astlist(Arena *a);
+void astpush(ASTList *l, AST *ast);
 TestResult test_function_eval(Arena *a)
 {
 	Element res = eval_wrapper(a, str("fn(x) { x + 2; };"));
+	ASTList *exp_params = astlist(a);
+	astpush(exp_params, ast_alloc(a, (AST) { AST_IDENT, .AST_STR = str("x")}));
+
+	ASTList *exp_body = astlist(a);
+	astpush(exp_body, ast_alloc(a, (AST) { AST_INFIX, .AST_INFIX = {
+				.left = ast_alloc(a, (AST) { AST_IDENT, .AST_STR = str("x") }),
+				.op = str("+"),
+				.right = ast_alloc(a, (AST) { AST_INT, .AST_INT = {2} })
+				}}));
+	Element expected = (Element) {
+		FUNCTION, .FUNCTION = {.params = exp_params, .body = exp_body}
+	};
+
 	if (TEST(res.type != FUNCTION))
 		return fail(str("Wrong type"));
-	// TODO extend
+	if (TEST(!astlist_eq(res.FUNCTION.params, expected.FUNCTION.params)));
+	if (TEST(!astlist_eq(res.FUNCTION.body, expected.FUNCTION.body)));
 	return pass();
 }
 
@@ -358,6 +376,37 @@ TestResult test_builtin_function(Arena *a)
 			return fail(str("Wrong type"));
 		if (TEST(res.INT != tests[i].expected))
 			return fail(str("Value mismatch"));
+	}
+	return pass();
+}
+
+TestResult test_assignment(Arena *a)
+{
+	struct test {
+		String input;
+		Element expected;
+	};
+	struct test tests[] = {
+		{str("var x = 5; x = 10; x;"), (Element) { INT, .INT = 10 }},
+		{str("var x = false; x = true; x;"), (Element) { BOOL, .BOOL = true }},
+		{str("val x = 5; x = 10; x"), (Element) { ERR, .ERR = str("x binding is not mutable") }},
+	};
+	for (int i = 0; i < arrlen(tests); i++) {
+		Element res = eval_wrapper(a, tests[i].input);
+		if (TEST(res.type != tests[i].expected.type))
+			return fail(str("Different result type"));
+		if (res.type == INT) {
+			if (TEST(res.INT != tests[i].expected.INT))
+				return fail(str("Value mismatch"));
+		}
+		if (res.type == BOOL) {
+			if (TEST(res.BOOL != tests[i].expected.BOOL))
+				return fail(str("Value mismatch"));
+		}
+		if (res.type == ERR) {
+			if (TEST(!str_eq(res.ERR, tests[i].expected.ERR)))
+				return fail(str("Value mismatch"));
+		}
 	}
 	return pass();
 }
