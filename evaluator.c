@@ -25,13 +25,12 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name);
 
 priv Element eval_array(Arena *a, Namespace *ns, ASTList *lst) ;
 priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
-
 priv Element eval_list(Arena *a, Namespace *ns, ASTList *lst);
 priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst);
 
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
-priv Element eval_call(Arena *a, Namespace *ns, Element callee, ElemList *args);
+priv Element eval_call(Arena *a, Namespace *ns, Element callee, ElemArray *args);
 
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
@@ -102,9 +101,9 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			Element fn = eval(a, ns, node->AST_CALL.function);
 			if (fn.type == ERR) return fn;
 			Namespace *func_namespace = (fn.type == FUNCTION) ? fn.FUNCTION.namespace : ns;
-			ElemList *args = elemlist_from_ast(a, ns, node->AST_CALL.args); // TODO move to array
-			if (args->len == 1 && args->head->element.type == ERR)
-				return args->head->element;
+			ElemArray *args = elemarray_from_ast(a, ns, node->AST_CALL.args); // TODO move to array
+			if (args->len == 1 && args->items[0].type == ERR)
+				return args->items[0];
 			return eval_call(a, func_namespace, fn, args);
 		}
 		// LITERALS
@@ -249,8 +248,8 @@ priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
 	}
 }
 
-priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args);
-priv Element eval_call(Arena *a, Namespace *ns, Element fn, ElemList *args)
+priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemArray *args);
+priv Element eval_call(Arena *a, Namespace *ns, Element fn, ElemArray *args)
 {
 	if (fn.type == FUNCTION)
 		return eval_function_call(a, ns, fn.FUNCTION, args);
@@ -259,7 +258,7 @@ priv Element eval_call(Arena *a, Namespace *ns, Element fn, ElemList *args)
 	return error(CONCAT(a, str("Not a callable element: "), to_string(a, fn)));
 }
 
-priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemList *args)
+priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemArray *args)
 {
 	if (fn.params->len != args->len) 
 		return error(str_fmt(a, "Invalid number of arguments: Got %lu, expected %lu",
@@ -268,23 +267,23 @@ priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, Ele
 	Arena	*call_arena = arena(MB(1));
 	Namespace *call_ns = ns_inner(call_arena, ns, 16);
 
-	ElemNode *el_node = args->head;
-	for (ASTNode *ast_node = fn.params->head; ast_node; ast_node = ast_node->next) {
-		ns_put(call_ns, ast_node->ast->AST_STR, el_node->element, MUTABLE);
-		el_node = el_node->next;
+	ASTNode *params_node = fn.params->head;
+	for (int i = 0; i < args->len; i++) {
+		if (NEVER(!params_node))
+			return (arena_free(&call_arena), (Element) { ELE_NULL });
+		ns_put(call_ns, params_node->ast->AST_STR, args->items[i], MUTABLE);
+		params_node = params_node->next;
 	}
+
 	Element res = eval_block(a, call_ns, fn.body);
 	if (res.type == RETURN) {
 		Element return_value = elem_copy(a, (*res.RETURN.value));
-		/* Element *return_value = elem_alloc(a, (*res.RETURN.value)); */
 		arena_free(&call_arena);
 		return return_value;
-		/* return (*return_value); */
 	}
 	Element *copy = elem_alloc(a, res);
 	arena_free(&call_arena);
 	return (*copy);
-	/* return eval_block(a, call_ns, fn.body); */
 }
 
 priv Element eval_bang(Arena *a, Element right);
@@ -381,8 +380,8 @@ priv Element error(String msg)
 }
 
 // ~BUILTINs
-priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args);
-priv Element builtin_print(Arena *a, Namespace *ns, ElemList *args);
+priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args);
+priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args);
 priv Element BUILTINS(String name)
 {
 	if (str_eq(str("print"), name))
@@ -392,23 +391,25 @@ priv Element BUILTINS(String name)
 	return (Element) { ELE_NULL };	
 }
 
-priv Element builtin_print(Arena *a, Namespace *ns, ElemList *args)
+priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args)
 {
 	u64	previous_offset = a->used;
-	for (ElemNode *tmp = args->head; tmp; tmp = tmp->next)
-		str_print(to_string(a, tmp->element));
+	for (int i = 0; i < args->len; i++)
+		str_print(to_string(a, args->items[i]));
 	arena_pop_to(a, previous_offset);
 	str_print(str("\n"));
 	return (Element) { ELE_NULL };
 }
 
-priv Element builtin_len(Arena *a, Namespace *ns, ElemList *args)
+priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args)
 {
 	if (args->len != 1)
 		return error(str_fmt(a, "Wrong number of args for len: got %lu, expected 1", args->len));
-	Element only_arg = args->head->element;
+	Element only_arg = args->items[0];
 	if (only_arg.type == STR)
 		return (Element) { INT, .INT = only_arg.STR.len };
+	if (only_arg.type == ARRAY)
+		return (Element) { INT, .INT = only_arg.ARRAY->len };
 	if (only_arg.type == LIST)
 		return (Element) { INT, .INT = only_arg.LIST->len };
 	return error(CONCAT(a, str("Type error: len called with argument of type: "), type_str(only_arg.type)));

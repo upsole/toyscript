@@ -77,7 +77,7 @@ typedef struct ElemList	ElemList;
 typedef struct ElemArray ElemArray;
 
 typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, ARRAY, RETURN, FUNCTION, BUILTIN } ElementType;
-typedef Element (*BuiltinFunction)(Arena *a, Namespace *ns, ElemList *args);
+typedef Element (*BuiltinFunction)(Arena *a, Namespace *ns, ElemArray *args);
 struct Element {
 	ElementType type;
 	union {
