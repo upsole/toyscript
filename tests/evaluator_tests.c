@@ -142,7 +142,12 @@ TestResult test_index_eval(Arena *a)
 	    {str("[2, false, 5][1]"), { BOOL, .BOOL = false}},
 	    {str("[1, 3, 4][-1]"), { ELE_NULL }},
 	    {str("[1, 3, 4][3]"), { ELE_NULL }},
-		{str("[\"string1\", 0, false][0]"), { STR, .STR = str("string1") }}
+		{str("[\"string1\", 0, false][0]"), { STR, .STR = str("string1") }},
+		{str("var x = [1, 3, 7]; x[0]"), { INT, .INT = 1 }},
+	    {str("var x = [2, false, 5]; x[1]"), { BOOL, .BOOL = false}},
+	    {str("var x = [1, 3, 4]; x[-1]"), { ELE_NULL }},
+	    {str("var x = [1, 3, 4]; x[3]"), { ELE_NULL }},
+		{str("var x = [\"string1\", 0, false]; x[0]"), { STR, .STR = str("string1") }}
 	};
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
