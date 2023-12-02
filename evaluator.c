@@ -187,14 +187,27 @@ priv Element eval_list(Arena *a, Namespace *ns, ASTList *lst)
 	return (Element) { LIST, .LIST = res };
 }
 
+priv Element eval_array_index(Arena *a, Element left, Element index);
 priv Element eval_list_index(Arena *a, Element left, Element index);
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index)
 {
+	if (left.type == ARRAY && index.type == INT)
+		return eval_array_index(a, left, index);
+
 	if (left.type == LIST && index.type == INT)
 		return eval_list_index(a, left, index);
+
 	return error(CONCAT(a, 
 				str("No index operation implemented for: "),
 				type_str(left.type)));
+}
+
+priv Element eval_array_index(Arena *a, Element left, Element index)
+{
+	i64	id = index.INT;
+	if (id < 0 || id >= left.ARRAY->len)
+		return (Element) { ELE_NULL };
+	return left.ARRAY->items[id];
 }
 
 priv Element eval_list_index(Arena *a, Element left, Element index)

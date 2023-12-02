@@ -128,19 +128,10 @@ TestResult test_array_eval(Arena *a)
 		if (TEST(res.ARRAY->items[i].INT != expected[i]))
 			return fail(str("Value mismatch"));
 	}
-
-	/* ElemNode *cursor = res.LIST->head; */
-	/* for (int i = 0; i < arrlen(expected); i++) { */
-	/* 	if (TEST(!cursor)) */
-	/* 		return fail(str("Actual list is shorter than expected list")); */
-	/* 	if (TEST(cursor->element.INT != expected[i])) */
-	/* 		return fail(str("Value mismatch")); */
-	/* 	cursor = cursor->next; */
-	/* } */
 	return pass();
 }
 
-TestResult test_array_index_eval(Arena *a)
+TestResult test_index_eval(Arena *a)
 {
 	struct test {
 		String input;
@@ -150,7 +141,9 @@ TestResult test_array_index_eval(Arena *a)
 	    {str("[1, 3, 4][0]"), { INT, .INT = 1}},
 	    {str("[2, false, 5][1]"), { BOOL, .BOOL = false}},
 	    {str("[1, 3, 4][-1]"), { ELE_NULL }},
-	    {str("[1, 3, 4][3]"), { ELE_NULL }}};
+	    {str("[1, 3, 4][3]"), { ELE_NULL }},
+		{str("[\"string1\", 0, false][0]"), { STR, .STR = str("string1") }}
+	};
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
 		if (TEST(res.type != tests[i].expected.type))
@@ -161,6 +154,10 @@ TestResult test_array_index_eval(Arena *a)
 		}
 		if (res.type == BOOL) {
 			if (TEST(res.BOOL != tests[i].expected.BOOL))
+				return fail(str("Value mismatch"));
+		}
+		if (res.type == STR) {
+			if (TEST(!str_eq(res.STR, tests[i].expected.STR)))
 				return fail(str("Value mismatch"));
 		}
 	}
