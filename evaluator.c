@@ -22,8 +22,13 @@ priv Element eval_program(Arena *a, Namespace *ns, AST *node);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
 priv Element eval_identifier(Arena *a, Namespace *ns, String name);
-priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst);
-priv Element eval_element_list(Arena *a, Namespace *ns, ASTList *lst);
+
+priv Element eval_array(Arena *a, Namespace *ns, ASTList *lst) ;
+priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
+
+priv Element eval_list(Arena *a, Namespace *ns, ASTList *lst);
+priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst);
+
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
 priv Element eval_call(Arena *a, Namespace *ns, Element callee, ElemList *args);
@@ -39,7 +44,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				return (Element) { ELE_NULL };
 			Element value = {0};
 			if (node->AST_VAL.value->type == AST_LIST)
-				value = eval_element_list(a, ns, node->AST_VAL.value->AST_LIST);
+				value = eval_list(a, ns, node->AST_VAL.value->AST_LIST);
 			else
 				value = eval(a, ns, node->AST_VAL.value);
 			if (value.type == ERR) return value;
@@ -65,8 +70,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		case AST_IDENT:
 			return eval_identifier(a, ns, node->AST_STR);
 		case AST_LIST: {
-			// TODO this will default to array
-			return eval_element_list(a, ns, node->AST_LIST);
+			return eval_array(a, ns, node->AST_LIST);
 		} break;
 		case AST_FN: {
 			ASTList *params = node->AST_FN.params;
@@ -98,7 +102,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			Element fn = eval(a, ns, node->AST_CALL.function);
 			if (fn.type == ERR) return fn;
 			Namespace *func_namespace = (fn.type == FUNCTION) ? fn.FUNCTION.namespace : ns;
-			ElemList *args = eval_list(a, ns, node->AST_CALL.args);
+			ElemList *args = elemlist_from_ast(a, ns, node->AST_CALL.args); // TODO move to array
 			if (args->len == 1 && args->head->element.type == ERR)
 				return args->head->element;
 			return eval_call(a, func_namespace, fn, args);
@@ -161,28 +165,23 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name)
 	return error(CONCAT(a, str("Name not found: "), name));
 }
 
-priv ElemList *elemlist_single(Arena *a, Element el);
-priv ElemList *eval_list(Arena *a, Namespace *ns, ASTList *lst)
-{
-	u64	previous_offset = a->used;
-	ElemList *res = elemlist(a);
-	Element tmp = {0};
-	for (ASTNode *cursor = lst->head; cursor; cursor = cursor->next) {
-		tmp = eval(a, ns, cursor->ast);
-		if (tmp.type == ERR) {
-			arena_pop_to(a, previous_offset);
-			return elemlist_single(a, tmp);
-		}
-		elempush(res, tmp);
-	}
-	return res;
-}
-
-priv Element eval_element_list(Arena *a, Namespace *ns, ASTList *lst) 
+priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
+priv Element eval_array(Arena *a, Namespace *ns, ASTList *lst) 
 {
 	if(NEVER(!lst))
 		return (Element) { ELE_NULL };
-	ElemList *res = eval_list(a, ns, lst);
+	ElemArray *res = elemarray_from_ast(a, ns, lst);
+	if (res->len == 1 && res->items[0].type == ERR)
+		return res->items[0];
+	return (Element) { ARRAY, .ARRAY = res };
+}
+
+priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst);
+priv Element eval_list(Arena *a, Namespace *ns, ASTList *lst) 
+{
+	if(NEVER(!lst))
+		return (Element) { ELE_NULL };
+	ElemList *res = elemlist_from_ast(a, ns, lst);
 	if (res->len == 1 && res->head->element.type == ERR)
 		return res->head->element;
 	return (Element) { LIST, .LIST = res };
@@ -523,6 +522,22 @@ priv ElemList *elemlist_single(Arena *a, Element el)
 	return lst;
 }
 
+priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst)
+{
+	u64	previous_offset = a->used;
+	ElemList *res = elemlist(a);
+	Element tmp = {0};
+	for (ASTNode *cursor = lst->head; cursor; cursor = cursor->next) {
+		tmp = eval(a, ns, cursor->ast);
+		if (tmp.type == ERR) {
+			arena_pop_to(a, previous_offset);
+			return elemlist_single(a, tmp);
+		}
+		elempush(res, tmp);
+	}
+	return res;
+}
+
 // ~ELEMARRAY
 priv ElemArray *elemarray(Arena *a, int len)
 {
@@ -558,6 +573,7 @@ priv ElemArray *elemarray_single(Arena *a, Element el)
 	arr->items[0] = elem_copy(a, el);
 	return arr;
 }
+
 
 // ~NAMESPACE
 Namespace *ns_create(Arena *a, u64 cap)

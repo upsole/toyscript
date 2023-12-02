@@ -3,7 +3,8 @@
 TestResult test_integer_eval(Arena *a);
 TestResult test_string_eval(Arena *a);
 TestResult test_string_concat(Arena *a);
-TestResult test_list_eval(Arena *a);
+/* TestResult test_list_eval(Arena *a); */
+TestResult test_array_eval(Arena *a);
 TestResult test_index_eval(Arena *a);
 TestResult test_bang_eval(Arena *a);
 TestResult test_cond_eval(Arena *a);
@@ -22,7 +23,7 @@ int main(int ac, char **av)
 			{str("INTEGERS"), &test_integer_eval},
 			{str("STRINGS"), &test_string_eval},
 			{str("STRING CONCAT"), &test_string_concat},
-			{str("LISTS"), &test_list_eval},
+			{str("ARRAY"), &test_array_eval},
 			{str("INDEX"), &test_index_eval},
 			{str("BANG"), &test_bang_eval},
 			{str("CONDITIONALS"), &test_cond_eval},
@@ -113,28 +114,33 @@ TestResult test_string_concat(Arena *a)
 	return pass();
 }
 
-TestResult test_list_eval(Arena *a)
+TestResult test_array_eval(Arena *a)
 {
 	String input = str("[1, 3 * 5, 7 + 3]");
 	i64 expected[] = {1, 15, 10};
 	Element res = eval_wrapper(a, input);
-	if (TEST(res.type != LIST)) 
+	if (TEST(res.type != ARRAY)) 
 		return fail(str("Wrong type"));
 
-	if (TEST(res.LIST->len != 3))
+	if (TEST(res.ARRAY->len != 3))
 		return fail(str("Wrong number of elements"));
-	ElemNode *cursor = res.LIST->head;
-	for (int i = 0; i < arrlen(expected); i++) {
-		if (TEST(!cursor))
-			return fail(str("Actual list is shorter than expected list"));
-		if (TEST(cursor->element.INT != expected[i]))
+	for (int i = 0; i < res.ARRAY->len; i++) {
+		if (TEST(res.ARRAY->items[i].INT != expected[i]))
 			return fail(str("Value mismatch"));
-		cursor = cursor->next;
 	}
+
+	/* ElemNode *cursor = res.LIST->head; */
+	/* for (int i = 0; i < arrlen(expected); i++) { */
+	/* 	if (TEST(!cursor)) */
+	/* 		return fail(str("Actual list is shorter than expected list")); */
+	/* 	if (TEST(cursor->element.INT != expected[i])) */
+	/* 		return fail(str("Value mismatch")); */
+	/* 	cursor = cursor->next; */
+	/* } */
 	return pass();
 }
 
-TestResult test_index_eval(Arena *a)
+TestResult test_array_index_eval(Arena *a)
 {
 	struct test {
 		String input;
