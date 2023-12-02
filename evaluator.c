@@ -438,6 +438,7 @@ priv Element elem_copy(Arena *a, Element elem)
 }
 
 // STDOUT
+priv String array_to_string(Arena *a, ElemArray *arr);
 priv String list_to_string(Arena *a, ElemList *lst);
 String	to_string(Arena *a, Element e)
 {
@@ -452,6 +453,8 @@ String	to_string(Arena *a, Element e)
 			return e.STR;
 		case RETURN:
 			return to_string(a, (*e.RETURN.value));
+		case ARRAY:
+			return array_to_string(a, e.ARRAY);
 		case LIST:
 			return list_to_string(a, e.LIST);
 		case FUNCTION:
@@ -461,6 +464,31 @@ String	to_string(Arena *a, Element e)
 		default:
 			return str("Unknown");
 	}
+}
+
+priv String array_to_string(Arena *a, ElemArray *arr)
+{
+	if (!arr) return str("");
+	char *buf = arena_alloc(a, 1);
+	buf[0] = '[';
+	u64 len = 1;
+	for (int i = 0; i < arr->len; i++) {
+		String tmp = to_string(a, arr->items[i]);
+		arena_alloc(a, tmp.len);
+		memcpy(buf + len, tmp.buf, tmp.len);
+		len += tmp.len;
+		if (i < (arr->len - 1)) {
+			tmp = str(", ");
+			arena_alloc(a, tmp.len);
+			memcpy(buf + len, tmp.buf, tmp.len);
+			len += tmp.len;
+		}
+	}
+	String tmp = str("]");
+	arena_alloc(a, tmp.len);
+	memcpy(buf + len, tmp.buf, tmp.len);
+	len += tmp.len;
+	return (String){ buf, len };
 }
 
 priv String list_to_string(Arena *a, ElemList *lst)
