@@ -74,7 +74,9 @@ typedef struct Parser {
 typedef struct Element Element;
 typedef struct Namespace Namespace;
 typedef struct ElemList	ElemList;
-typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, RETURN, FUNCTION, BUILTIN } ElementType;
+typedef struct ElemArray ElemArray;
+
+typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, ARRAY, RETURN, FUNCTION, BUILTIN } ElementType;
 typedef Element (*BuiltinFunction)(Arena *a, Namespace *ns, ElemList *args);
 struct Element {
 	ElementType type;
@@ -85,6 +87,7 @@ struct Element {
 		bool 		BOOL;
 		String		STR;
 		ElemList	*LIST;
+		ElemArray	*ARRAY;
 		// TODO ElemArray type used by and val = [] and Tuples
 		struct RETURN { Element *value; } RETURN; 
 		struct FUNCTION { ASTList *params; ASTList *body; Namespace *namespace; } FUNCTION;
@@ -92,6 +95,7 @@ struct Element {
 	};
 };
 
+// ~ LISTS
 typedef struct ElemNode {
 	Element	element;
 	struct ElemNode *next;
@@ -103,6 +107,11 @@ struct ElemList {
 	int len;
 };
 
+struct ElemArray {
+	Element *items;
+	int	len;
+};
+// ~NAMESPACE
 typedef struct Bind Bind;
 struct Bind {
 	String key;
