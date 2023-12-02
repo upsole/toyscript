@@ -299,6 +299,8 @@ priv bool ast_eq(AST *node1, AST *node2)
 				return false;
 			return ast_eq(node1->AST_VAR.value, node2->AST_VAR.value);
 		} break;
+		case AST_ASSIGN:
+			return true; // TODO implement
 		case AST_FN: 
 			return (astlist_eq(node1->AST_FN.params, node2->AST_FN.params) && 
 						astlist_eq(node1->AST_FN.body, node2->AST_FN.body)); 

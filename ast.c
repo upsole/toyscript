@@ -2,7 +2,7 @@
 #include "toyscript.h"
 
 // Types & LUTS 
-typedef enum Precedence { LOWEST, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX } Precedence;
+typedef enum Precedence { LOWEST, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX, HIGHEST } Precedence;
 typedef AST* (*PrefixParser)(Parser *p);
 typedef AST* (*InfixParser) (Parser *p, AST *left);
 priv PrefixParser PREFIX_PARSERS(TokenType type);
@@ -316,6 +316,15 @@ priv AST *parse_infix_expression(Parser *p, AST *left)
 	return res;
 }
 
+priv AST *parse_assignment_expression(Parser *p, AST *left)
+{
+	AST *res = ast_alloc(p->arena, (AST) { AST_ASSIGN, .AST_ASSIGN =  {  left,  NULL  }});
+	Precedence prec = PRECEDENCE(p->cur_token.type); // XXX
+	next_token(p);
+	res->AST_ASSIGN.right = parse_expression(p, prec);
+	return res;
+}
+
 priv AST *parse_call_expression(Parser *p, AST *function)
 {
 	u64	previous_offset = p->arena->used;
@@ -381,6 +390,8 @@ priv InfixParser INFIX_PARSERS(TokenType type)
 		case LT:
 		case GT:
 			return &parse_infix_expression;
+		case ASSIGN:
+			return &parse_assignment_expression;
 		case LPAREN:
 			return &parse_call_expression;
 		case LBRACKET:
@@ -413,6 +424,8 @@ priv Precedence PRECEDENCE(TokenType type)
 			return CALL;
 		case LBRACKET:
 			return INDEX;
+		case ASSIGN:
+			return HIGHEST;
 		default:
 			return LOWEST;
 	}
@@ -533,6 +546,9 @@ String ast_str(Arena *a, AST *node)
 			return CONCAT(a, str("|return "), 
 					ast_str(a, node->AST_RETURN.value),
 					str("|"));
+		case AST_ASSIGN:
+			return CONCAT(a, str("|"), ast_str(a, node->AST_ASSIGN.left),
+					str(" = "), ast_str(a, node->AST_ASSIGN.right), str("|"));
 		case AST_PROGRAM:
 		case AST_LIST:
 			return astlist_str(a, node->AST_LIST);
@@ -604,12 +620,12 @@ void ast_aprint(Arena *a, AST *node)
 String	asttype_str(ASTType type)
 {
 	String typenames[] = {
-		str("AST_VAL"), str("AST_VAR"), str("AST_RETURN"),
-		str("AST_IDENT"), str("AST_INT"), str("AST_BOOL"),
-		str("AST_BOOL"), str("AST_STR"), str("AST_LIST"),
-		str("AST_FN"), str("AST_PREFIX"), str("AST_INFIX"),
-		str("AST_COND"), str("AST_CALL"), str("AST_INDEX"),
-		str("AST_PROGRAM")
+		str("AST_VAL"), str("AST_VAR"), str("AST_ASSIGN"),
+		str("AST_RETURN"), str("AST_IDENT"), str("AST_INT"), 
+		str("AST_BOOL"), str("AST_BOOL"), str("AST_STR"), 
+		str("AST_LIST"), str("AST_FN"), str("AST_PREFIX"), 
+		str("AST_INFIX"), str("AST_COND"), str("AST_CALL"), 
+		str("AST_INDEX"), str("AST_PROGRAM")
 	};
 	if (NEVER(type < 0 || type > arrlen(typenames)))
 		return str("Unkown ast type");

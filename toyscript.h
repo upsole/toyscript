@@ -25,7 +25,7 @@ typedef struct Lexer {
 // ~AST
 typedef struct AST AST;
 typedef struct ASTNode ASTNode;
-typedef enum ASTType { AST_VAL, AST_VAR, AST_RETURN, // STATEMENTS
+typedef enum ASTType { AST_VAL, AST_VAR, AST_RETURN, AST_ASSIGN, // STATEMENTS
 	AST_IDENT, AST_INT, AST_BOOL, AST_STR, AST_LIST, AST_FN, // VALUES
 	AST_PREFIX, AST_INFIX, AST_COND, AST_CALL, AST_INDEX, // EXPRESSIONS
 	AST_PROGRAM
@@ -59,6 +59,7 @@ struct AST {
 		struct AST_COND { AST *condition; ASTList *consequence; ASTList *alternative; } AST_COND;
 		struct AST_CALL { AST *function; ASTList *args; } AST_CALL;
 		struct AST_INDEX { AST *left; AST *index; } AST_INDEX;
+		struct AST_ASSIGN { AST *left; AST *right; } AST_ASSIGN; // TODO move to just string on left
 	};
 };
 

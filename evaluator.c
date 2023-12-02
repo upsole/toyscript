@@ -22,11 +22,14 @@ priv Element eval_program(Arena *a, Namespace *ns, AST *node);
 priv Element eval_prefix_expression(Arena *a, String op, Element right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right);
 priv Element eval_identifier(Arena *a, Namespace *ns, String name);
+priv Element eval_mutable_identifier(Arena *a, Namespace *ns, String name);
 
 priv Element eval_array(Arena *a, Namespace *ns, ASTList *lst) ;
 priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
 priv Element eval_list(Arena *a, Namespace *ns, ASTList *lst);
 priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst);
+
+priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node);
 
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
@@ -64,6 +67,11 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			Element value = eval(a, ns, node->AST_RETURN.value);
 			if (value.type == ERR) return value;
 			return (Element) { RETURN, .RETURN = { elem_alloc(a, value) }};
+		} break;
+		case AST_ASSIGN: {
+			if (NEVER(!node->AST_ASSIGN.left || !node->AST_ASSIGN.right || (node->AST_ASSIGN.left->type != AST_IDENT)))
+				return (Element) { ELE_NULL };
+			return eval_assignement(a, ns, node->AST_ASSIGN);
 		} break;
 		// EXPRESSIONS
 		case AST_IDENT:
@@ -162,6 +170,16 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name)
 	Element builtin = BUILTINS(name);
 	if (builtin.type == BUILTIN) return builtin;
 	return error(CONCAT(a, str("Name not found: "), name));
+}
+
+priv Element eval_mutable_identifier(Arena *a, Namespace *ns, String name)
+{
+	Bind *res = ns_get(ns, name);
+	if (!res || NEVER(!res->element))
+		return error(CONCAT(a, str("Name not found: "), name));
+	if (!res->mutable)
+		return error(CONCAT(a, name, str(" binding is not mutable")));
+	return (*res->element);
 }
 
 priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
@@ -319,6 +337,21 @@ priv Element eval_bang(Arena *a, Element right)
 	}
 }
 
+priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node)
+{
+	Element left = eval_mutable_identifier(a, ns, node.left->AST_STR);
+	if (left.type == ERR)
+		return left;
+	Element right = eval(a, ns, node.right);
+	if (right.type == ERR)
+		return left;
+	if (right.type != left.type)
+		return error(CONCAT(a, str("Can't assign type "), type_str(right.type), str(" to variable "), 
+					node.right->AST_STR, str("of type "), type_str(left.type)));
+	ns_put(ns, node.left->AST_STR, right, MUTABLE);
+	return right;		
+}
+
 priv Element eval_infix_int(Arena *a, i64 left, String op, i64 right);
 priv Element eval_infix_str(Arena *a, String left, String op, String right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right)
@@ -326,7 +359,6 @@ priv Element eval_infix_expression(Arena *a, Element left, String op, Element ri
 	if (left.type != right.type) 
 		return error(CONCAT(a, str("Invalid types in operation: "),
 					type_str(left.type), op, type_str(right.type)));
-
 	if (left.type == INT && right.type == INT)
 		return eval_infix_int(a, left.INT, op, right.INT);
 	if (left.type == STR && right.type == STR)
