@@ -10,6 +10,7 @@ priv Namespace *ns_copy(Arena *a, Namespace *ns);
 
 priv ElemList *elemlist(Arena *a);
 priv void elempush(ElemList *lst, Element el);
+priv ElemArray *elemarray(Arena *a, int len);
 
 priv Element BUILTINS(String name);
 
@@ -443,6 +444,14 @@ priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
 		elempush(arg0.LIST, arg1);
 		return arg0;
 	}
+	if (arg0.type == ARRAY) {
+		int a0_len = arg0.ARRAY->len;
+		ElemArray *res = elemarray(a, (a0_len + 1));
+		for (int i = 0; i < a0_len; i++)
+			res->items[i] = arg0.ARRAY->items[i];
+		res->items[a0_len] = arg1;
+		return (Element) { ARRAY, .ARRAY = res };
+	}
 	return error(CONCAT(a, str("Wrong types for push, got "),
 				type_str(arg0.type), str(" and "), type_str(arg1.type)));
 }
@@ -662,7 +671,7 @@ priv ElemList *elemlist_from_array(Arena *a, ElemArray *arr)
 // ~ELEMARRAY
 priv ElemArray *elemarray(Arena *a, int len)
 {
-	ElemArray *arr = arena_alloc(a, sizeof(ElemArray));
+	ElemArray *arr = arena_alloc_zero(a, sizeof(ElemArray));
 	arr->items = arena_alloc(a, len * sizeof(Element));
 	arr->len = len;
 	return arr;
