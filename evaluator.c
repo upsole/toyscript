@@ -44,11 +44,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		case AST_VAL: {
 			if (NEVER(!node->AST_VAL.value))
 				return (Element) { ELE_NULL };
-			Element value = {0};
-			if (node->AST_VAL.value->type == AST_LIST)
-				value = eval_list(a, ns, node->AST_VAL.value->AST_LIST);
-			else
-				value = eval(a, ns, node->AST_VAL.value);
+			Element value = eval(a, ns, node->AST_VAL.value);
 			if (value.type == ERR) return value;
 			ns_put(ns, node->AST_VAL.name, value, IMMUTABLE);
 			return value;
@@ -56,7 +52,11 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		case AST_VAR: {
 			if (NEVER(!node->AST_VAR.value))
 				return (Element) { ELE_NULL };
-			Element value = eval(a, ns, node->AST_VAR.value);
+			Element value = {0};
+			if (node->AST_VAR.value->type == AST_LIST)
+				value = eval_list(a, ns, node->AST_VAR.value->AST_LIST);
+			else
+				value = eval(a, ns, node->AST_VAR.value);
 			if (value.type == ERR) return value;
 			ns_put(ns, node->AST_VAR.name, value, MUTABLE);
 			return value;

@@ -63,7 +63,6 @@ priv int repl()
 			parser_print_errors(p);
 		else
 			str_print(to_string(stdin_arena, result)), str_print(str("\n"));
-		arena_reset(program_arena);
 		arena_reset(stdin_arena);
 	}
 	return 0;
