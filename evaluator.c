@@ -1,5 +1,6 @@
 #include "base.h"
 #include "toyscript.h"
+#include <stdio.h>
 
 #define IMMUTABLE 0
 #define MUTABLE 1
@@ -245,6 +246,8 @@ priv Element eval_list_index(Arena *a, Element left, Element index)
 priv bool is_truthy(Element e)
 {
 	switch (e.type) {
+		case ERR:
+			return false;
 		case ELE_NULL:
 			return false;
 		case INT:
@@ -422,6 +425,7 @@ priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args);
+priv Element builtin_slurp(Arena *a, Namespace *ns, ElemArray *args);
 priv Element BUILTINS(String name)
 {
 	if (str_eq(str("print"), name))
@@ -436,7 +440,39 @@ priv Element BUILTINS(String name)
 		return (Element) { BUILTIN, .BUILTIN = &builtin_car };
 	if (str_eq(str("cdr"), name))
 		return (Element) { BUILTIN, .BUILTIN = &builtin_cdr };
+	if (str_eq(str("slurp"), name))
+		return (Element) { BUILTIN, .BUILTIN = &builtin_slurp };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element read_file_to_elem(Arena *a, char *filename);
+priv Element builtin_slurp(Arena *a, Namespace *ns, ElemArray *args)
+{
+	if (args->len != 1)
+		return error(str_fmt(a, "Wrong number of args for slurp: got %lu, expected 1", args->len));
+	Element arg0 = args->items[0];
+	if (arg0.type == ERR)
+		return arg0;
+	if (arg0.type != STR)
+		return error(CONCAT(a, str("Called slurp with the wrong type "), type_str(arg0.type), str(" wanted STR")));
+	Element file = read_file_to_elem(a, str_dupc(a, arg0.STR));
+	return file;
+}
+
+priv Element read_file_to_elem(Arena *a, char *filename)
+{
+	String s = {0};
+	FILE *f = fopen(filename, "r");
+	if (!f) 
+		return error(str_fmt(a, "File '%s' not found", filename));
+	fseek(f, 0, SEEK_END);
+	u64 len = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	s.buf = arena_alloc(a, len);
+	s.len = len;
+	fread(s.buf, sizeof(u8), len, f);
+	fclose(f);
+	return (Element) { STR, .STR = s };
 }
 
 priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args)

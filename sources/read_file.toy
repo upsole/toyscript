@@ -1,0 +1,4 @@
+val file_contents = slurp("sources/read_file.toy");
+if (file_contents) {
+	print(file_contents);
+}
