@@ -415,15 +415,36 @@ priv Element error(String msg)
 priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args);
+priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args);
 priv Element BUILTINS(String name)
 {
 	if (str_eq(str("print"), name))
-			return (Element) { BUILTIN, .BUILTIN = &builtin_print };
+		return (Element) { BUILTIN, .BUILTIN = &builtin_print };
 	if (str_eq(str("len"), name))
-			return (Element) { BUILTIN, .BUILTIN = &builtin_len };
+		return (Element) { BUILTIN, .BUILTIN = &builtin_len };
 	if (str_eq(str("type"), name))
-			return (Element) { BUILTIN, .BUILTIN = &builtin_type };
+		return (Element) { BUILTIN, .BUILTIN = &builtin_type };
+	if (str_eq(str("push"), name))
+		return (Element) { BUILTIN, .BUILTIN = &builtin_push };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
+{
+	if (args->len != 2)
+		return error(str_fmt(a, "Wrong number of args for push: got %lu, expected 2", args->len));
+	Element arg0 = args->items[0];
+	if (arg0.type == ERR)
+		return arg0;
+	Element arg1 = args->items[1];
+	if (arg1.type == ERR)
+		return arg1;
+	if (arg0.type == LIST) {
+		elempush(arg0.LIST, arg1);
+		return arg0;
+	}
+	return error(CONCAT(a, str("Wrong types for push, got "),
+				type_str(arg0.type), str(" and "), type_str(arg1.type)));
 }
 
 priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args)
@@ -447,14 +468,14 @@ priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args)
 {
 	if (args->len != 1)
 		return error(str_fmt(a, "Wrong number of args for len: got %lu, expected 1", args->len));
-	Element only_arg = args->items[0];
-	if (only_arg.type == STR)
-		return (Element) { INT, .INT = only_arg.STR.len };
-	if (only_arg.type == ARRAY)
-		return (Element) { INT, .INT = only_arg.ARRAY->len };
-	if (only_arg.type == LIST)
-		return (Element) { INT, .INT = only_arg.LIST->len };
-	return error(CONCAT(a, str("Type error: len called with argument of type: "), type_str(only_arg.type)));
+	Element arg0 = args->items[0];
+	if (arg0.type == STR)
+		return (Element) { INT, .INT = arg0.STR.len };
+	if (arg0.type == ARRAY)
+		return (Element) { INT, .INT = arg0.ARRAY->len };
+	if (arg0.type == LIST)
+		return (Element) { INT, .INT = arg0.LIST->len };
+	return error(CONCAT(a, str("Type error: len called with argument of type: "), type_str(arg0.type)));
 }
 
 // HELPER
