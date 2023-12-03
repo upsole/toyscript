@@ -419,6 +419,7 @@ priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args);
+priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args);
 priv Element BUILTINS(String name)
 {
 	if (str_eq(str("print"), name))
@@ -431,7 +432,40 @@ priv Element BUILTINS(String name)
 		return (Element) { BUILTIN, .BUILTIN = &builtin_push };
 	if (str_eq(str("car"), name))
 		return (Element) { BUILTIN, .BUILTIN = &builtin_car };
+	if (str_eq(str("cdr"), name))
+		return (Element) { BUILTIN, .BUILTIN = &builtin_cdr };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args)
+{
+	if (args->len != 1)
+		return error(str_fmt(a, "Wrong number of args for car: got %lu, expected 1", args->len));
+	Element arg0 = args->items[0];
+	if (arg0.type == ERR)
+		return arg0;
+
+	if (arg0.type == LIST) {
+		ElemNode *cdr = arg0.LIST->head;
+		if (!cdr || !cdr->next)
+			return (Element) { ELE_NULL };
+		ElemList *lst = elemlist(a);
+		lst->len = (arg0.LIST->len == 0) ? 0 : arg0.LIST->len - 1;
+		lst->head = cdr->next;
+		return (Element) { LIST, .LIST = lst };
+	}
+	if (arg0.type == ARRAY) {
+		if (arg0.ARRAY->len < 2)
+			return (Element) { ELE_NULL };
+		ElemArray *arr = elemarray(a, arg0.ARRAY->len - 1);
+		for (int i = 1; i < arg0.ARRAY->len; i++)
+			arr->items[i - 1] = arg0.ARRAY->items[i];
+		return (Element) { ARRAY, .ARRAY = arr };
+	}
+	if (arg0.type == ELE_NULL)  
+		return arg0;
+	return error(CONCAT(a, str("Wrong type for car, got "),
+				type_str(arg0.type)));
 }
 
 priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
@@ -441,9 +475,6 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 	Element arg0 = args->items[0];
 	if (arg0.type == ERR)
 		return arg0;
-	Element arg1 = args->items[1];
-	if (arg1.type == ERR)
-		return arg1;
 
 	if (arg0.type == LIST) {
 		if (arg0.LIST->head)
@@ -453,12 +484,15 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 	}
 	if (arg0.type == ARRAY) {
 		if (arg0.ARRAY->len < 1)
-			return (Element) { ELE_NULL };
+			return (Element) { ELE_NULL }; // XXX
 		return arg0.ARRAY->items[0];
 	}
+	if (arg0.type == ELE_NULL)  
+		return arg0;
 	return error(CONCAT(a, str("Wrong type for car, got "),
 				type_str(arg0.type)));
 }
+
 
 priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
 {
