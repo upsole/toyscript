@@ -1,5 +1,5 @@
 val filter = fn(list, predicate) {
-	val res = [];
+	var res = [];
 	val recur = fn(tmp, item) {
 		if (predicate(item)) {
 			push(res, item);

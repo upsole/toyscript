@@ -59,7 +59,7 @@ struct AST {
 		struct AST_COND { AST *condition; ASTList *consequence; ASTList *alternative; } AST_COND;
 		struct AST_CALL { AST *function; ASTList *args; } AST_CALL;
 		struct AST_INDEX { AST *left; AST *index; } AST_INDEX;
-		struct AST_ASSIGN { AST *left; AST *right; } AST_ASSIGN; // TODO move to just string on left
+		struct AST_ASSIGN { AST *left; AST *right; } AST_ASSIGN;
 	};
 };
 
@@ -116,7 +116,7 @@ struct ElemArray {
 typedef struct Bind Bind;
 struct Bind {
 	String key;
-	Element *element;
+	Element element;
 	bool	mutable;
 	Bind *next;
 };

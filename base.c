@@ -268,7 +268,7 @@ void strpush(StrList *l, String s)
 	node->string = s;
 	node->next = NULL;
 
-	if (ALWAYS(l)); // XXX extend
+	if (ALWAYS(l));
 
 	if (!l->head) {
 		l->head = node;

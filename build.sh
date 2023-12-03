@@ -82,7 +82,8 @@ test_launcher()
 
 case $1 in
 	t|test) 
-		test_launcher ${@:2};;
+		test_launcher ${@:2};
+		[[ $? -eq 0 ]] && vim-local-rc;;
 	demo)
 		compile_demo;
 		[[ $? -eq 0 ]] && ./demo.out;
@@ -92,7 +93,8 @@ case $1 in
 		[[ $? -eq 0 ]] && ./toyscript ${@:2};
 		[[ $? -eq 0 ]] && vim-local-rc;;
 	"")
-		compile;;
+		compile;
+		[[ $? -eq 0 ]] && vim-local-rc;;
 	*)
 		echo "Read build.sh for available commands";;
 esac

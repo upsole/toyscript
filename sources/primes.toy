@@ -33,9 +33,4 @@ val main = fn(x) {
 	return recur(0, x);
 }
 
-main(7444);
-main(15);
-main(15);
-main(15);
-main(15);
-main(15);
+main(5040);

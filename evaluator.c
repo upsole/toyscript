@@ -9,8 +9,10 @@ priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable);
 priv Namespace *ns_copy(Arena *a, Namespace *ns);
 
 priv ElemList *elemlist(Arena *a);
+priv ElemList *elemlist_copy(Arena *a, ElemList *lst);
 priv void elempush(ElemList *lst, Element el);
 priv ElemArray *elemarray(Arena *a, int len);
+priv ElemArray *elemarray_copy(Arena *a, ElemArray *arr);
 
 priv Element BUILTINS(String name);
 
@@ -168,7 +170,7 @@ priv Element eval_block(Arena *a, Namespace *ns, ASTList *list)
 priv Element eval_identifier(Arena *a, Namespace *ns, String name)
 {
 	Bind *res = ns_get(ns, name);
-	if (res && ALWAYS(res->element)) return (*res->element);
+	if (res) return res->element;
 	Element builtin = BUILTINS(name);
 	if (builtin.type == BUILTIN) return builtin;
 	return error(CONCAT(a, str("Name not found: "), name));
@@ -177,11 +179,11 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name)
 priv Element eval_mutable_identifier(Arena *a, Namespace *ns, String name)
 {
 	Bind *res = ns_get(ns, name);
-	if (!res || NEVER(!res->element))
+	if (!res)
 		return error(CONCAT(a, str("Name not found: "), name));
 	if (!res->mutable)
 		return error(CONCAT(a, name, str(" binding is not mutable")));
-	return (*res->element);
+	return (res->element);
 }
 
 priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
@@ -295,7 +297,7 @@ priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, Ele
 		params_node = params_node->next;
 	}
 
-	Element res = eval_block(a, call_ns, fn.body);
+	Element res = eval_block(call_arena, call_ns, fn.body);
 	if (res.type == RETURN) {
 		Element return_value = elem_copy(a, (*res.RETURN.value));
 		arena_free(&call_arena);
@@ -349,7 +351,7 @@ priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node)
 		return left;
 	if (right.type != left.type)
 		return error(CONCAT(a, str("Can't assign type "), type_str(right.type), str(" to variable "), 
-					node.right->AST_STR, str("of type "), type_str(left.type)));
+					node.left->AST_STR, str(" of type "), type_str(left.type)));
 	ns_put(ns, node.left->AST_STR, right, MUTABLE);
 	return right;		
 }
@@ -480,11 +482,11 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 		if (arg0.LIST->head)
 			return arg0.LIST->head->element;
 		else
-			return (Element) { ELE_NULL }; // XXX 
+			return (Element) { ELE_NULL };
 	}
 	if (arg0.type == ARRAY) {
 		if (arg0.ARRAY->len < 1)
-			return (Element) { ELE_NULL }; // XXX
+			return (Element) { ELE_NULL };
 		return arg0.ARRAY->items[0];
 	}
 	if (arg0.type == ELE_NULL)  
@@ -555,10 +557,16 @@ priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args)
 priv Element *elem_alloc(Arena *a, Element elem)
 {
 	Element	*ptr = arena_alloc(a, sizeof(Element));
-	if (elem.type == STR)
+	if (elem.type == STR || elem.type == ERR)
 		elem.STR = str_dup(a, elem.STR);
 	if (elem.type == RETURN)
 		elem.RETURN.value = elem_alloc(a, *elem.RETURN.value);
+	if (elem.type == LIST) {
+		elem.LIST = elemlist_copy(a, elem.LIST);
+	}
+	if (elem.type == ARRAY) {
+		elem.ARRAY = elemarray_copy(a, elem.ARRAY);
+	}
 	if (elem.type == FUNCTION) {
 		elem.FUNCTION.params = astlist_copy(a, elem.FUNCTION.params);
 		elem.FUNCTION.body = astlist_copy(a, elem.FUNCTION.body);
@@ -684,7 +692,7 @@ priv void elempush(ElemList *l, Element el)
 	node->element = el;
 	node->next = NULL;
 
-	if (NEVER(!l)); // XXX extend
+	if (NEVER(!l));
 
 	if (!l->head) {
 		l->head = node;
@@ -732,6 +740,14 @@ priv ElemList *elemlist_from_array(Arena *a, ElemArray *arr)
 	return lst;
 }
 
+priv ElemList *elemlist_copy(Arena *a, ElemList *lst)
+{
+	ElemList *res = elemlist(a);
+	for (ElemNode *cursor = lst->head; cursor; cursor = cursor->next)
+		elempush(res, cursor->element);
+	return res;
+}
+
 // ~ELEMARRAY
 priv ElemArray *elemarray(Arena *a, int len)
 {
@@ -756,7 +772,7 @@ priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst)
 			arena_pop_to(a, previous_offset);
 			return elemarray_single(a, tmp);
 		}
-		arr->items[i] = elem_copy(a, tmp);
+		arr->items[i] = tmp;
 		i++;
 	}
 	return arr;
@@ -783,6 +799,13 @@ priv ElemArray *elemarray_single(Arena *a, Element el)
 	return arr;
 }
 
+priv ElemArray *elemarray_copy(Arena *a, ElemArray *arr)
+{
+	ElemArray *res = elemarray(a, arr->len);
+	for (int i = 0; i < arr->len; i++)
+		res->items[i] = arr->items[i];
+	return res;
+}
 
 // ~NAMESPACE
 Namespace *ns_create(Arena *a, u64 cap)
@@ -819,19 +842,19 @@ priv Bind *bind_alloc(Arena *a, String key, Element el, bool is_mutable)
 {
 	Bind *b = arena_alloc(a, sizeof(Bind));
 	b->key = str_dup(a, key);
-	b->element = elem_alloc(a, el);
+	b->element = el;
 	b->mutable = is_mutable;
 	b->next = NULL;
 	return b;
 }
 
-priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable) // XXX remember if this the only check we need when implementing val / var
+priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable)
 {
 	u64 id = hash(key) % ns->cap;
 	for (Bind *b = ns->values[id]; b; b = b->next) {
 		if (str_eq(key, b->key)) { // if key used, update
 			if (is_mutable) {
-				b->element = elem_alloc(ns->arena, elem);
+				b->element = elem;
 				return 1;
 			}
 			else
@@ -868,13 +891,13 @@ priv Namespace *ns_copy(Arena *a, Namespace *ns)
 		if (ns->values[i]) {
 			res->values[i] =
 			    bind_alloc(res->arena, ns->values[i]->key,
-				       (*ns->values[i]->element), ns->values[i]->mutable);
+				       ns->values[i]->element, ns->values[i]->mutable);
 			res->len++;
 			if (ns->values[i]->next) {
 				for (Bind *ns_cursor = ns->values[i]->next;
 				     ns_cursor; ns_cursor = ns_cursor->next) {
 					Bind *p = bind_alloc(a, ns_cursor->key,
-							     (*ns_cursor->element), ns_cursor->mutable);
+							     ns_cursor->element, ns_cursor->mutable);
 					p->next = res->values[i];
 					res->values[i] = p;
 					res->len++;

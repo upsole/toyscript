@@ -2,7 +2,7 @@
 #include "toyscript.h"
 
 // Types & LUTS 
-typedef enum Precedence { LOWEST, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX, HIGHEST } Precedence;
+typedef enum Precedence { LOWEST, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, ASSIGNMENT, CALL, INDEX } Precedence;
 typedef AST* (*PrefixParser)(Parser *p);
 typedef AST* (*InfixParser) (Parser *p, AST *left);
 priv PrefixParser PREFIX_PARSERS(TokenType type);
@@ -319,7 +319,7 @@ priv AST *parse_infix_expression(Parser *p, AST *left)
 priv AST *parse_assignment_expression(Parser *p, AST *left)
 {
 	AST *res = ast_alloc(p->arena, (AST) { AST_ASSIGN, .AST_ASSIGN =  {  left,  NULL  }});
-	Precedence prec = PRECEDENCE(p->cur_token.type); // XXX
+	Precedence prec = PRECEDENCE(p->cur_token.type);
 	next_token(p);
 	res->AST_ASSIGN.right = parse_expression(p, prec);
 	return res;
@@ -425,7 +425,7 @@ priv Precedence PRECEDENCE(TokenType type)
 		case LBRACKET:
 			return INDEX;
 		case ASSIGN:
-			return HIGHEST;
+			return ASSIGNMENT;
 		default:
 			return LOWEST;
 	}
@@ -460,7 +460,7 @@ void astpush(ASTList *l, AST *ast)
 	node->ast = ast;
 	node->next = NULL;
 
-	if (NEVER(!l)); // XXX extend
+	if (NEVER(!l));
 
 	if (!l->head) {
 		l->head = node;

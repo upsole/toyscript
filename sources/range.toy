@@ -1,5 +1,5 @@
 val range = fn(begin, end) {
-	val new_list = [];
+	var new_list = [];
 	val recur = fn(x) {
 		push(new_list, x);
 		if (x < end) {
@@ -10,3 +10,6 @@ val range = fn(begin, end) {
 	return new_list;
 }
 print(range(0, 5));
+#var x = range(0, 5);
+#print(x);
+#print(type(x));

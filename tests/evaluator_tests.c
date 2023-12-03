@@ -338,12 +338,12 @@ TestResult test_function_call(Arena *a)
 			  "};"
 			  "val sum_two = nest_sum(2);"
 			  "sum_two(5);";
-
 	struct test tests[] = {
 	    {str("val id = fn(x) { return x; }; id(3)"), 3},
 	    {str("val sum = fn(x, y) { return x + y; } sum(3, 4);"), 7},
 	    {str("val square = fn(x) { x * x; } square(7);"), 49},
-	    {cstr(multiline), 7}};
+	    {cstr(multiline), 7}
+	};
 
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
