@@ -414,13 +414,23 @@ priv Element error(String msg)
 // ~BUILTINs
 priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args);
+priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args);
 priv Element BUILTINS(String name)
 {
 	if (str_eq(str("print"), name))
 			return (Element) { BUILTIN, .BUILTIN = &builtin_print };
 	if (str_eq(str("len"), name))
 			return (Element) { BUILTIN, .BUILTIN = &builtin_len };
+	if (str_eq(str("type"), name))
+			return (Element) { BUILTIN, .BUILTIN = &builtin_type };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args)
+{
+	if (args->len != 1)
+		return error(str_fmt(a, "Wrong number of args for type: got %lu, expected 1", args->len));
+	return (Element) { TYPE, .TYPE = args->items[0].type };
 }
 
 priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args)
@@ -493,9 +503,12 @@ String	to_string(Arena *a, Element e)
 			return str_fmt(a, "fn(namespace: %p)", e.FUNCTION.namespace);
 		case ERR:
 			return e.ERR;
-		default:
-			return str("Unknown");
+		case BUILTIN:
+			return str("builtin fn");
+		case TYPE:
+			return type_str(e.TYPE);
 	}
+	return (NEVER(0 && "Some type slept through?"), str(""));
 }
 
 priv String array_to_string(Arena *a, ElemArray *arr)
@@ -553,7 +566,8 @@ String	type_str(ElementType type)
 	String strings[] = { 
 		str("NULL"), str("ERR"), str("INT"), 
 		str("BOOL"), str("STR"), str("LIST"), str("ARRAY"),
-		str("RETURN"), str("FUNCTION"), str("BUILTIN")
+		str("RETURN"), str("FUNCTION"), str("BUILTIN"),
+		str("TYPE")
 	};
 	if (NEVER(type < 0 || type >= arrlen(strings)))
 		return str("Unknown type");

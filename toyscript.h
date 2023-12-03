@@ -77,7 +77,7 @@ typedef struct Namespace Namespace;
 typedef struct ElemList	ElemList;
 typedef struct ElemArray ElemArray;
 
-typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, ARRAY, RETURN, FUNCTION, BUILTIN } ElementType;
+typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, ARRAY, RETURN, FUNCTION, BUILTIN, TYPE } ElementType;
 typedef Element (*BuiltinFunction)(Arena *a, Namespace *ns, ElemArray *args);
 struct Element {
 	ElementType type;
@@ -92,6 +92,7 @@ struct Element {
 		struct RETURN { Element *value; } RETURN; 
 		struct FUNCTION { ASTList *params; ASTList *body; Namespace *namespace; } FUNCTION;
 		BuiltinFunction BUILTIN;
+		ElementType	TYPE;
 	};
 };
 
