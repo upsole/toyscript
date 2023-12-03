@@ -5,3 +5,4 @@ toyscript
 main.c
 *.out
 .gdbinit
+local.sh

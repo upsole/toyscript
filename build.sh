@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 ### 
 cflags="-Wall -Werror -Wimplicit-fallthrough "
-dev="-Wno-unused-function -Wno-unused-value -g3"
+dev="-Wno-unused-value -g3"
 src="base.c lexer.c ast.c evaluator.c"
 exit_on_fail=""
-args="$cflags $dev $src -DDEV_DEBUG"
+args="$cflags $dev $src"
 cc=gcc
 ### 
 
@@ -82,19 +82,15 @@ test_launcher()
 
 case $1 in
 	t|test) 
-		test_launcher ${@:2};
-		[[ $? -eq 0 ]] && vim-local-rc;;
+		test_launcher ${@:2};;
 	demo)
 		compile_demo;
-		[[ $? -eq 0 ]] && ./demo.out;
-		[[ $? -eq 0 ]] && vim-local-rc;;
+		[[ $? -eq 0 ]] && ./demo.out;;
 	r|run)
 		compile;
-		[[ $? -eq 0 ]] && ./toyscript ${@:2};
-		[[ $? -eq 0 ]] && vim-local-rc;;
+		[[ $? -eq 0 ]] && ./toyscript ${@:2};;
 	"")
-		compile;
-		[[ $? -eq 0 ]] && vim-local-rc;;
+		compile;;
 	*)
 		echo "Read build.sh for available commands";;
 esac
