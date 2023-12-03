@@ -5,7 +5,7 @@
 #define MUTABLE 1
 priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap); 
 priv Bind *ns_get(Namespace *ns, String key);
-priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
+priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
 priv Namespace *ns_copy(Arena *a, Namespace *ns);
 
 priv ElemList *elemlist(Arena *a);
@@ -47,7 +47,8 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				return (Element) { ELE_NULL };
 			Element value = eval(a, ns, node->AST_VAL.value);
 			if (value.type == ERR) return value;
-			ns_put(ns, node->AST_VAL.name, value, IMMUTABLE);
+			if(ns_put(ns, node->AST_VAL.name, value, IMMUTABLE) == -1)
+				return (Element) { ERR, .ERR = str("Immutable variable already bound") };
 			return value;
 		} break;
 		case AST_VAR: {
@@ -417,6 +418,7 @@ priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_type(Arena *a, Namespace *ns, ElemArray *args);
 priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args);
+priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args);
 priv Element BUILTINS(String name)
 {
 	if (str_eq(str("print"), name))
@@ -427,7 +429,35 @@ priv Element BUILTINS(String name)
 		return (Element) { BUILTIN, .BUILTIN = &builtin_type };
 	if (str_eq(str("push"), name))
 		return (Element) { BUILTIN, .BUILTIN = &builtin_push };
+	if (str_eq(str("car"), name))
+		return (Element) { BUILTIN, .BUILTIN = &builtin_car };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
+{
+	if (args->len != 1)
+		return error(str_fmt(a, "Wrong number of args for car: got %lu, expected 1", args->len));
+	Element arg0 = args->items[0];
+	if (arg0.type == ERR)
+		return arg0;
+	Element arg1 = args->items[1];
+	if (arg1.type == ERR)
+		return arg1;
+
+	if (arg0.type == LIST) {
+		if (arg0.LIST->head)
+			return arg0.LIST->head->element;
+		else
+			return (Element) { ELE_NULL }; // XXX 
+	}
+	if (arg0.type == ARRAY) {
+		if (arg0.ARRAY->len < 1)
+			return (Element) { ELE_NULL };
+		return arg0.ARRAY->items[0];
+	}
+	return error(CONCAT(a, str("Wrong type for car, got "),
+				type_str(arg0.type)));
 }
 
 priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
@@ -761,20 +791,24 @@ priv Bind *bind_alloc(Arena *a, String key, Element el, bool is_mutable)
 	return b;
 }
 
-priv void ns_put(Namespace *ns, String key, Element elem, bool is_mutable) // XXX remember if this the only check we need when implementing val / var
+priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable) // XXX remember if this the only check we need when implementing val / var
 {
 	u64 id = hash(key) % ns->cap;
 	for (Bind *b = ns->values[id]; b; b = b->next) {
 		if (str_eq(key, b->key)) { // if key used, update
-			if (is_mutable)
+			if (is_mutable) {
 				b->element = elem_alloc(ns->arena, elem);
-			return;
+				return 1;
+			}
+			else
+				return -1; // found an immutable binding
 		}
 	}
 	Bind *b = bind_alloc(ns->arena, key, elem, is_mutable);
 	b->next = ns->values[id];
 	ns->values[id] = b;
 	ns->len++;
+	return 1;
 }
 
 priv Bind *ns_get_inner(Namespace *ns, String key)
