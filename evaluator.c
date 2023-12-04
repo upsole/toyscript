@@ -7,6 +7,7 @@
 priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap); 
 priv Bind *ns_get(Namespace *ns, String key);
 priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
+priv int ns_update(Namespace *ns, String key, Element elem);
 priv Namespace *ns_copy(Arena *a, Namespace *ns);
 
 priv ElemList *elemlist(Arena *a);
@@ -254,6 +255,8 @@ priv bool is_truthy(Element e)
 			return (e.INT != 0);
 		case BOOL:
 			return e.BOOL;
+		case STR:
+			return (!str_eq(e.STR, str("")));
 		default:
 			return true;
 	}
@@ -357,7 +360,7 @@ priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node)
 		if (right.type != left.type)
 			return error(CONCAT(a, str("Can't assign type "), type_str(right.type), str(" to variable "), 
 						node.left->AST_STR, str(" of type "), type_str(left.type)));
-		ns_put(ns, node.left->AST_STR, right, MUTABLE);
+		ns_update(ns, node.left->AST_STR, right);
 		return right;		
 	}
 
@@ -450,10 +453,17 @@ priv Element eval_infix_int(Arena *a, i64 left, String op, i64 right)
 
 priv Element eval_infix_str(Arena *a, String left, String op, String right)
 {
-	if (!str_eq(op, str("+"))) 
-		return error(CONCAT(a, str("Invalid operation: "),
-					type_str(STR), op, type_str(STR)));
-	return (Element) { STR, .STR = str_concat(a, left, right) };
+	if (str_eq(op, str("+")))
+		return (Element) { STR, .STR = str_concat(a, left, right) };
+
+	if (str_eq(op, str("==")))
+		return (Element) { BOOL, .BOOL = str_eq(left, right) };
+
+	if (str_eq(op, str("!=")))
+		return (Element) { BOOL, .BOOL = (!str_eq(left, right)) };
+
+	return error(CONCAT(a, str("Invalid operation: "),
+				type_str(STR), op, type_str(STR)));
 }
 
 priv Element error(String msg)
@@ -543,6 +553,11 @@ priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args)
 			arr->items[i - 1] = arg0.ARRAY->items[i];
 		return (Element) { ARRAY, .ARRAY = arr };
 	}
+	if (arg0.type == STR) {
+		if (arg0.STR.len < 1) 
+			return (Element) { STR, .STR = str("") };
+		return (Element) { STR, .STR = str_slice(arg0.STR, 1, arg0.STR.len) };
+	}
 	if (arg0.type == ELE_NULL)  
 		return arg0;
 	return error(CONCAT(a, str("Wrong type for car, got "),
@@ -567,6 +582,11 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 		if (arg0.ARRAY->len < 1)
 			return (Element) { ELE_NULL };
 		return arg0.ARRAY->items[0];
+	}
+	if (arg0.type == STR) {
+		if (arg0.STR.len < 1) 
+			return (Element) { STR, .STR = str("") };
+		return (Element) { STR, .STR = str_slice(arg0.STR, 0, 1) };
 	}
 	if (arg0.type == ELE_NULL)  
 		return arg0;
@@ -673,7 +693,7 @@ String	to_string(Arena *a, Element e)
 		case BOOL:
 			return (e.BOOL) ? str("true") : str("false");
 		case STR:
-			return e.STR;
+			return CONCAT(a, str("\""), e.STR, str("\""));
 		case RETURN:
 			return to_string(a, (*e.RETURN.value));
 		case ARRAY:
@@ -768,7 +788,7 @@ priv ElemList *elemlist(Arena *a)
 priv void elempush(ElemList *l, Element el)
 {
 	ElemNode *node = arena_alloc(l->arena, sizeof(ElemNode));
-	node->element = el;
+	node->element = elem_copy(l->arena, el);
 	node->next = NULL;
 
 	if (NEVER(!l));
@@ -856,7 +876,7 @@ priv ElemArray *elemarray_copy(Arena *a, ElemArray *arr)
 {
 	ElemArray *res = elemarray(a, arr->len);
 	for (int i = 0; i < arr->len; i++)
-		res->items[i] = arr->items[i];
+		res->items[i] = elem_copy(a, arr->items[i]);
 	return res;
 }
 
@@ -935,6 +955,22 @@ priv Bind *ns_get(Namespace *ns, String key)
 	Bind *res = ns_get_inner(ns, key);
 	if (!res && ns->parent) res = ns_get(ns->parent, key);
 	return res;
+}
+
+priv int ns_update(Namespace *ns, String key, Element elem)
+{
+	// Updates first hit of binding in the namespace it's found - Assumes it's been confirmed to exist as MUTABLE before
+	Bind *target = ns_get_inner(ns, key);
+	if (!target) {
+		if (ns->parent)
+			return ns_update(ns->parent, key, elem);
+		else
+			return 0;
+	}
+	if (NEVER(!target->mutable))
+		return 0;
+	target->element = elem_copy(ns->arena, elem);
+	return 1;
 }
 
 priv Namespace *ns_copy(Arena *a, Namespace *ns)

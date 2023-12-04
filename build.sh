@@ -82,6 +82,7 @@ test_launcher()
 
 case $1 in
 	t|test) 
+		compile;
 		test_launcher ${@:2};;
 	demo)
 		compile_demo;

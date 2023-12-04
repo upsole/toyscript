@@ -1,0 +1,32 @@
+val slice_til_char = fn(string, substr) {
+	var res = "";
+	val recur = fn(s) {
+		if (s) {
+			if (car(s) != substr) {
+				recur(cdr(s));
+				res = car(s) + res;
+			}
+		}
+	};
+	recur(string);
+	return res;
+};
+
+val split = fn(string, char) {
+	var arr = [];
+	push(arr, slice_til_char(string, char));
+	val recur = fn(s) {
+		if (s) {
+			if (car(s) != char) {
+				recur(cdr(s));
+			} else {
+				push(arr, slice_til_char(cdr(s), char));
+				recur(cdr(s));
+			}
+		}
+	};
+	recur(string);
+	return arr;
+};
+val res = split("Hello World From Toyscript", " ");
+print(res);

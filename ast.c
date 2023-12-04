@@ -2,7 +2,7 @@
 #include "toyscript.h"
 
 // Types & LUTS 
-typedef enum Precedence { LOWEST, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, ASSIGNMENT, CALL, INDEX } Precedence;
+typedef enum Precedence { LOWEST, ASSIGNMENT, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX } Precedence;
 typedef AST* (*PrefixParser)(Parser *p);
 typedef AST* (*InfixParser) (Parser *p, AST *left);
 priv PrefixParser PREFIX_PARSERS(TokenType type);
