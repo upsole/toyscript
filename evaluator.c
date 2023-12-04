@@ -74,7 +74,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			return (Element) { RETURN, .RETURN = { elem_alloc(a, value) }};
 		} break;
 		case AST_ASSIGN: {
-			if (NEVER(!node->AST_ASSIGN.left || !node->AST_ASSIGN.right || (node->AST_ASSIGN.left->type != AST_IDENT)))
+			if (NEVER(!node->AST_ASSIGN.left || !node->AST_ASSIGN.right)) 
 				return (Element) { ELE_NULL };
 			return eval_assignement(a, ns, node->AST_ASSIGN);
 		} break;
@@ -344,19 +344,62 @@ priv Element eval_bang(Arena *a, Element right)
 	}
 }
 
+priv Element eval_assignement_to_index(Arena *a, Namespace *ns, struct AST_INDEX index, AST *right);
 priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node)
 {
-	Element left = eval_mutable_identifier(a, ns, node.left->AST_STR);
-	if (left.type == ERR)
-		return left;
-	Element right = eval(a, ns, node.right);
-	if (right.type == ERR)
-		return left;
-	if (right.type != left.type)
-		return error(CONCAT(a, str("Can't assign type "), type_str(right.type), str(" to variable "), 
-					node.left->AST_STR, str(" of type "), type_str(left.type)));
-	ns_put(ns, node.left->AST_STR, right, MUTABLE);
-	return right;		
+	if (node.left->type == AST_IDENT) {
+		Element left = eval_mutable_identifier(a, ns, node.left->AST_STR);
+		if (left.type == ERR)
+			return left;
+		Element right = eval(a, ns, node.right);
+		if (right.type == ERR)
+			return left;
+		if (right.type != left.type)
+			return error(CONCAT(a, str("Can't assign type "), type_str(right.type), str(" to variable "), 
+						node.left->AST_STR, str(" of type "), type_str(left.type)));
+		ns_put(ns, node.left->AST_STR, right, MUTABLE);
+		return right;		
+	}
+
+	if (node.left->type == AST_INDEX) {
+		return eval_assignement_to_index(a, ns, node.left->AST_INDEX, node.right);
+	}
+	return error(CONCAT(a, str("Can't assign to type "), type_str(node.left->type)));
+}
+
+priv Element eval_assignement_to_index(Arena *a, Namespace *ns, struct AST_INDEX index, AST *new_val_ast)
+{
+	Element new_val = eval(a, ns, new_val_ast);
+	if (new_val.type == ERR)
+		return new_val;
+	Element right = eval(a, ns, index.index);
+	if (index.left->type == AST_IDENT) {
+		// Eval Ident
+		Element left = eval(a, ns, index.left);
+		if (left.type == ARRAY) {
+			if (right.type != INT)
+				return error(str("Index should be an INT for ARRAY indexing"));
+			if (right.INT < 0 || right.INT >= left.ARRAY->len)
+				return error(str_fmt(a, "Out of bounds assignment: max index is %d, attempted to access %d", 
+							(left.ARRAY->len - 1), right.INT));
+			left.ARRAY->items[right.INT] = new_val;
+			return new_val;
+		}
+		if (left.type == LIST) {
+			if (right.type != INT)
+				return error(str("Index should be an INT for LIST indexing"));
+			if (right.INT < 0 || right.INT >= left.LIST->len)
+				return error(str_fmt(a, "Out of bounds assignment: max index is %d, attempted to access %d", 
+							(left.LIST->len - 1), right.INT));
+			ElemNode *tmp = left.LIST->head;
+			for (int i = 0; i < right.INT; i++)
+				tmp = tmp->next;
+			tmp->element = new_val;
+			return new_val;
+		}
+		return error(str("Not an indexable item."));
+	}
+	return error(str("Trying to assign to a non-bound value"));
 }
 
 priv Element eval_infix_int(Arena *a, i64 left, String op, i64 right);
