@@ -422,10 +422,15 @@ priv Element eval_infix_expression(Arena *a, Element left, String op, Element ri
 		if (str_eq(op, str("!="))) 
 			return (Element) { BOOL, .BOOL = (left.BOOL != right.BOOL) };
 	}
+	if (left.type == LIST && right.type == LIST) { // TODO convert second arg to list/array as needed
+		ElemArray *lst = elemarray(a, 2);
+		lst->items[0] = left; lst->items[1] = right;
+		return builtin_concat(a, NULL, lst); // XXX
+	}
 	if (left.type == ARRAY && right.type == ARRAY) {
 		ElemArray *lst = elemarray(a, 2);
 		lst->items[0] = left; lst->items[1] = right;
-		return builtin_concat(a, NULL, lst);
+		return builtin_concat(a, NULL, lst); // XXX
 	}
 	return error(CONCAT(a, str("Invalid operation: "),
 				type_str(left.type), op, type_str(right.type)));
@@ -503,7 +508,7 @@ priv Element BUILTINS(String name)
 		return (Element) { BUILTIN, .BUILTIN = &builtin_slurp };
 	return (Element) { ELE_NULL };	
 }
-
+priv Element elemlist_concat(Arena *a, ElemList *left, ElemList *right);
 priv Element elemarray_concat(Arena *a, ElemArray *left, ElemArray *right);
 priv Element builtin_concat(Arena *a, Namespace *ns, ElemArray *args)
 {
@@ -515,15 +520,31 @@ priv Element builtin_concat(Arena *a, Namespace *ns, ElemArray *args)
 	Element arg1 = args->items[1];
 	if (arg1.type == ERR)
 		return arg1;
-	if (arg1.type == ARRAY) {
-		return elemarray_concat(a, arg0.ARRAY, arg1.ARRAY);
+	if (arg0.type == ARRAY) {
+		if (ALWAYS(arg1.type == ARRAY))
+			return elemarray_concat(a, arg0.ARRAY, arg1.ARRAY);
 	}
-	// IF LIST
+	if (arg0.type == LIST) {
+		if (ALWAYS(arg1.type == LIST))
+			return elemlist_concat(a, arg0.LIST, arg1.LIST);
+	}
 	// IF STR
 	return error(CONCAT(a, str("Wrong types for concat, got "),
 				type_str(arg0.type), str(" and "), type_str(arg1.type)));
 }
 
+priv Element elemlist_concat(Arena *a, ElemList *left, ElemList *right)
+{
+	if (!left || !left->head)
+		return (Element) { LIST, .LIST = right };
+	if (!right || !right->head)
+		return (Element) { LIST, .LIST = left };
+	ElemNode *tmp = left->head;
+	while (tmp->next) tmp = tmp->next; // Find last
+	tmp->next = right->head;
+	left->len += right->len;
+	return (Element) { LIST, .LIST = left};
+}
 priv Element elemarray_concat(Arena *a, ElemArray *left, ElemArray *right)
 {
 	ElemArray *new = elemarray(a, left->len + right->len);
