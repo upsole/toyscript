@@ -404,7 +404,7 @@ priv Element eval_assignement_to_index(Arena *a, Namespace *ns, struct AST_INDEX
 	}
 	return error(str("Trying to assign to a non-bound value"));
 }
-
+priv Element builtin_concat(Arena *a, Namespace *ns, ElemArray *args);
 priv Element eval_infix_int(Arena *a, i64 left, String op, i64 right);
 priv Element eval_infix_str(Arena *a, String left, String op, String right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right)
@@ -416,12 +416,16 @@ priv Element eval_infix_expression(Arena *a, Element left, String op, Element ri
 		return eval_infix_int(a, left.INT, op, right.INT);
 	if (left.type == STR && right.type == STR)
 		return eval_infix_str(a, left.STR, op, right.STR);
-
 	if (left.type == BOOL && right.type == BOOL) {
 		if (str_eq(op, str("=="))) 
 			return (Element) { BOOL, .BOOL = (left.BOOL == right.BOOL) };
 		if (str_eq(op, str("!="))) 
 			return (Element) { BOOL, .BOOL = (left.BOOL != right.BOOL) };
+	}
+	if (left.type == ARRAY && right.type == ARRAY) {
+		ElemArray *lst = elemarray(a, 2);
+		lst->items[0] = left; lst->items[1] = right;
+		return builtin_concat(a, NULL, lst);
 	}
 	return error(CONCAT(a, str("Invalid operation: "),
 				type_str(left.type), op, type_str(right.type)));
@@ -493,9 +497,46 @@ priv Element BUILTINS(String name)
 		return (Element) { BUILTIN, .BUILTIN = &builtin_car };
 	if (str_eq(str("cdr"), name))
 		return (Element) { BUILTIN, .BUILTIN = &builtin_cdr };
+	if (str_eq(str("concat"), name))
+		return (Element) { BUILTIN, .BUILTIN = &builtin_concat };
 	if (str_eq(str("slurp"), name))
 		return (Element) { BUILTIN, .BUILTIN = &builtin_slurp };
 	return (Element) { ELE_NULL };	
+}
+
+priv Element elemarray_concat(Arena *a, ElemArray *left, ElemArray *right);
+priv Element builtin_concat(Arena *a, Namespace *ns, ElemArray *args)
+{
+	if (args->len != 2)
+		return error(str_fmt(a, "Wrong number of args for concat: got %lu, expected 2", args->len));
+	Element arg0 = args->items[0];
+	if (arg0.type == ERR)
+		return arg0;
+	Element arg1 = args->items[1];
+	if (arg1.type == ERR)
+		return arg1;
+	if (arg1.type == ARRAY) {
+		return elemarray_concat(a, arg0.ARRAY, arg1.ARRAY);
+	}
+	// IF LIST
+	// IF STR
+	return error(CONCAT(a, str("Wrong types for concat, got "),
+				type_str(arg0.type), str(" and "), type_str(arg1.type)));
+}
+
+priv Element elemarray_concat(Arena *a, ElemArray *left, ElemArray *right)
+{
+	ElemArray *new = elemarray(a, left->len + right->len);
+	int j = 0;
+	for (int i = 0; i < left->len; i++) {
+		new->items[j] = left->items[i];
+		j++;
+	}
+	for (int i = 0; i < right->len; i++) {
+		new->items[j] = right->items[i];
+		j++;
+	}
+	return (Element) { ARRAY, .ARRAY = new };
 }
 
 priv Element read_file_to_elem(Arena *a, char *filename);
@@ -593,7 +634,6 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 	return error(CONCAT(a, str("Wrong type for car, got "),
 				type_str(arg0.type)));
 }
-
 
 priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
 {
