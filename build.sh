@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ### 
-cflags="-Wall -Werror -Wimplicit-fallthrough "
+cflags="-Wall -Werror -Wimplicit-fallthrough"
 dev="-Wno-unused-value -g3"
 src="base.c lexer.c ast.c evaluator.c"
 exit_on_fail=""

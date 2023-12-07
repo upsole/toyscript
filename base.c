@@ -134,7 +134,6 @@ priv int free_virtual_memory(void *ptr, size_t size)
     return munmap(ptr, size);
 }
 
-
 // ~STRINGS
 String	str_dup(Arena *a, String s)
 {
@@ -192,7 +191,7 @@ String str_concat_n(Arena *a, int count, ...)
 {
 	va_list args;
 	va_start(args, count);
-	char *buf;
+	char *buf = NULL;
 	u64 len = 0;
 	for (int i = 0; i < count; i++) {
 		String tmp = va_arg(args, String);
