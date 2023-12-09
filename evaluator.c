@@ -121,6 +121,8 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			return eval_call(a, func_namespace, fn, args);
 		}
 		// LITERALS
+		case AST_NULL:
+			return (Element) { ELE_NULL };
 		case AST_INT:
 			return (Element) { INT, .INT =  node->AST_INT.value  };
 		case AST_BOOL:

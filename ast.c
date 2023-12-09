@@ -84,7 +84,11 @@ priv AST *parse_return(Parser *p)
 	u64	previous_offset = p->arena->used;
 	next_token(p);
 	AST *res = ast_alloc(p->arena, (AST) { AST_RETURN, .AST_RETURN = { NULL }});
-	AST *right = parse_expression(p, LOWEST);
+	AST *right;
+	if (p->cur_token.type == SEMICOLON) {
+		right = ast_alloc(p->arena, (AST) { AST_NULL });
+	} else
+		right = parse_expression(p, LOWEST);
 	if (!right) {
 		arena_pop_to(p->arena, previous_offset);
 		return NULL;
