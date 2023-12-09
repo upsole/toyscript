@@ -1,0 +1,9 @@
+val fun = fn(x) {
+	if (x == 12468) {
+		return true;
+	}
+	print(x);
+	fun(x + 1);
+}
+
+fun(0);

@@ -1,0 +1,3 @@
+val voidFun = fn(x) { 5 + x; }
+val x = voidFun(10);
+print(x)

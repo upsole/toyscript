@@ -51,6 +51,8 @@ bool ast_eq(AST *node1, AST *node2)
 	switch (type) {
 		case AST_INT:
 			return node1->AST_INT.value == node2->AST_INT.value;
+		case AST_NULL:
+			return (node2->type == AST_NULL);
 		case AST_BOOL:
 			return node1->AST_BOOL.value == node2->AST_BOOL.value;
 		case AST_IDENT:

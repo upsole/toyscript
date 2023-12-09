@@ -181,6 +181,11 @@ priv AST *parse_ident(Parser *p)
 	return ast_alloc(p->arena, (AST) { AST_IDENT, .AST_STR =  p->cur_token.lit });
 }
 
+priv AST *parse_null(Parser *p)
+{
+	return ast_alloc(p->arena, (AST) { AST_NULL });
+}
+
 priv ASTList *parse_many(Parser *p, TokenType end_type);
 priv AST *parse_list(Parser *p)
 {
@@ -354,6 +359,8 @@ priv PrefixParser PREFIX_PARSERS(TokenType type)
 	switch (type) {
 		case TK_INT:
 			return &parse_int;
+		case TK_NULL:
+			return &parse_null;
 		case TK_STRING:
 			return &parse_string;
 		case TK_IDENT:
@@ -528,6 +535,8 @@ String ast_str(Arena *a, AST *node)
 		case AST_IDENT:
 		case AST_STR:
 			return node->AST_STR;
+		case AST_NULL:
+			return str("NULL");
 		case AST_VAL:
 			return CONCAT(a, 
 					str("|"), node->AST_VAL.name, 

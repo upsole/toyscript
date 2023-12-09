@@ -7,7 +7,8 @@ typedef enum TokenType {
 	SLASH, MOD, GT, LT, LPAREN, RPAREN, LBRACE, 
 	RBRACE, LBRACKET, RBRACKET, PLUS, MINUS, ASSIGN, 
 	EQ, NOT_EQ, TK_INT, TK_STRING, TK_IDENT, TK_VAL, 
-	TK_VAR, TK_FN, TK_RETURN, IF, ELSE, TRUE, FALSE
+	TK_VAR, TK_FN, TK_RETURN, IF, ELSE, TRUE, FALSE,
+	TK_NULL
 } TokenType;
 
 typedef struct Token {
@@ -28,7 +29,7 @@ typedef struct ASTNode ASTNode;
 typedef enum ASTType { AST_VAL, AST_VAR, AST_RETURN, AST_ASSIGN, // STATEMENTS
 	AST_IDENT, AST_INT, AST_BOOL, AST_STR, AST_LIST, AST_FN, // VALUES
 	AST_PREFIX, AST_INFIX, AST_COND, AST_CALL, AST_INDEX, // EXPRESSIONS
-	AST_PROGRAM
+	AST_NULL, AST_PROGRAM
 } ASTType;
 
 struct ASTNode {
@@ -46,6 +47,7 @@ typedef struct ASTList {
 struct AST {
 	ASTType type;
 	union {
+		struct AST_NULL {} AST_NULL;
 		struct AST_INT { long value; } AST_INT;
 		struct AST_BOOL { bool value; } AST_BOOL;
 		String AST_STR;
