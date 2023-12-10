@@ -188,6 +188,7 @@ priv TokenType keywords(String s)
 	if (str_eq(s, str("return"))) return TK_RETURN;
 	if (str_eq(s, str("if"))) return IF;
 	if (str_eq(s, str("else"))) return ELSE;
+	if (str_eq(s, str("while"))) return TK_WHILE;
 	if (str_eq(s, str("true"))) return TRUE;
 	if (str_eq(s, str("false"))) return FALSE;
 	if (str_eq(s, str("NULL"))) return TK_NULL;
@@ -220,7 +221,9 @@ String token_str(TokenType type)
 	    str("PLUS"),   str("MINUS"),   str("ASSIGN"),    str("EQ"),
 	    str("NOT_EQ"), str("INT"),	   str("STRING"), 	 str("IDENT"),     str("VAL"),    
 		str("VAR"),    str("FN"),	   str("RETURN"),    str("IF"),	   
-		str("ELSE"),   str("TRUE"),    str("FALSE"),	str("NULL")};
+		str("ELSE"),   str("WHILE"),   str("TRUE"),    	 str("FALSE"),	
+		str("NULL")
+	};
 	if (NEVER(type < 0 || type >= arrlen(names)))
 		return str("Unknown type");
 	return names[type];

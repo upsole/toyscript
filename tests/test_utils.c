@@ -100,6 +100,8 @@ bool ast_eq(AST *node1, AST *node2)
 				return (astlist_eq(node1->AST_COND.alternative, node2->AST_COND.alternative));
 			return true;
 		} break;
+		case AST_WHILE: // TODO implement
+			return true;
 		case AST_CALL: {
 			if (!ast_eq(node1->AST_CALL.function, node2->AST_CALL.function))
 				return false;

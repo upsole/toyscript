@@ -17,6 +17,7 @@ priv void next_token(Parser *p);
 priv bool expect_peek(Parser *p, TokenType t);
 priv void parser_error(Parser *p, String msg);
 
+
 // ~PARSER
 Parser	*parser(Arena *a, Lexer *l)
 {
@@ -41,6 +42,7 @@ AST	*parse_program(Parser *p)
 
 	while (p->cur_token.type != END) {
 		tmp = parse_statement(p);
+		if (p->errors) return NULL;
 		if (tmp) 
 			astpush(program->AST_LIST, tmp);
 		next_token(p);
@@ -65,6 +67,7 @@ ASTList *parse_block_statement(Parser *p)
 priv AST *parse_return(Parser *p);
 priv AST *parse_binding(Parser *p, TokenType type);
 priv AST *parse_expression_stmt(Parser *p);
+priv AST *parse_while_statement(Parser *p);
 priv AST *parse_statement(Parser *p)
 {
 	switch (p->cur_token.type) {
@@ -73,6 +76,8 @@ priv AST *parse_statement(Parser *p)
 		case TK_VAL:
 		case TK_VAR:
 			return parse_binding(p, p->cur_token.type);
+		case TK_WHILE:
+			return parse_while_statement(p);
 		default:
 			return parse_expression_stmt(p);
 	}
@@ -278,6 +283,28 @@ priv AST *parse_function(Parser *p)
 	ASTList	*body = parse_block_statement(p);
 	if (!body) return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_FN.body = body;
+	return res;
+}
+
+priv AST *parse_while_statement(Parser *p)
+{
+	u64 previous_offset = p->arena->used;
+	AST *res; 
+	if (!expect_peek(p, LPAREN)) return NULL;
+	next_token(p);
+	res = ast_alloc(p->arena, (AST) { AST_WHILE, .AST_WHILE = {0} });
+	AST *condition = parse_expression(p, LOWEST);
+	if (!condition) {
+		parser_error(p, str("Empty condition"));
+		return NULL;
+	} 
+	res->AST_WHILE.condition = condition;
+	if (!expect_peek(p, RPAREN)) return (arena_pop_to(p->arena, previous_offset), NULL);
+	if (!expect_peek(p, LBRACE)) return (arena_pop_to(p->arena, previous_offset), NULL);
+
+	ASTList *body = parse_block_statement(p);
+	if (!body) return (arena_pop_to(p->arena, previous_offset), NULL);
+	res->AST_WHILE.body = body;
 	return res;
 }
 
@@ -581,6 +608,12 @@ String ast_str(Arena *a, AST *node)
 					ast_str(a, node->AST_COND.condition), str("{"),
 					astlist_str(a, node->AST_COND.consequence), str("}"),
 					(node->AST_COND.alternative) ? (CONCAT(a, str(" else{"), astlist_str(a, node->AST_COND.alternative), str("}"))) : str(""),
+					str("|")
+					);
+		case AST_WHILE:
+			return CONCAT(a, str("|while"),
+					ast_str(a, node->AST_WHILE.condition), str("{"),
+					astlist_str(a, node->AST_WHILE.body), str("}"),
 					str("|")
 					);
 		case AST_CALL:

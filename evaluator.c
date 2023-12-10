@@ -36,12 +36,15 @@ priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst);
 
 priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node);
 
+priv bool is_truthy(Element e);
+priv Element eval_block(Arena *a, Namespace *ns, ASTList *list);
 priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Element index);
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node);
 priv Element eval_call(Arena *a, Namespace *ns, Element callee, ElemArray *args);
 
 Element	eval(Arena *a, Namespace *ns, AST *node)
 {
+	if (!node) return (Element) { ERR, .ERR = str("Program has errors") };
 	switch (node->type) {
 		case AST_PROGRAM:
 			return eval_program(a, ns, node);
@@ -120,6 +123,17 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				return args->items[0];
 			return eval_call(a, func_namespace, fn, args);
 		}
+		case AST_WHILE: { // TODO variables scoped to loop
+			Element condition = eval(a, ns, node->AST_WHILE.condition);
+			if (condition.type == ERR) return condition;
+			while (is_truthy(condition)) {
+				Element block = eval_block(a, ns, node->AST_WHILE.body);
+				if (block.type == ERR) return block;
+				condition = eval(a, ns, node->AST_WHILE.condition);
+				if (condition.type == ERR) return condition;
+			}
+			return (Element) { ELE_NULL };
+		}
 		// LITERALS
 		case AST_NULL:
 			return (Element) { ELE_NULL };
@@ -129,8 +143,6 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			return (Element) { BOOL, .BOOL = node->AST_BOOL.value  };
 		case AST_STR:
 			return (Element) { STR, .STR = node->AST_STR };
-		default:
-			return (Element) { ELE_NULL };
 	}
 	return (Element) { ELE_NULL };
 }
