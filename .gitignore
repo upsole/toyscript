@@ -6,3 +6,4 @@ main.c
 *.out
 .gdbinit
 local.sh
+STRINGS
