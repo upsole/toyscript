@@ -1,0 +1,4 @@
+var x = 0;
+while (x < 10) { var y = 100; print(x); print(y); x = x + 1; }
+print("End of while")
+print(y);

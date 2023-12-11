@@ -123,15 +123,18 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				return args->items[0];
 			return eval_call(a, func_namespace, fn, args);
 		}
-		case AST_WHILE: { // TODO variables scoped to loop
+		case AST_WHILE: {
 			Element condition = eval(a, ns, node->AST_WHILE.condition);
 			if (condition.type == ERR) return condition;
+			Arena *block_arena = arena(MB(1));
+			Namespace *block_ns = ns_inner(block_arena, ns, 16);
 			while (is_truthy(condition)) {
-				Element block = eval_block(a, ns, node->AST_WHILE.body);
-				if (block.type == ERR) return block;
+				Element block = eval_block(a, block_ns, node->AST_WHILE.body);
+				if (block.type == ERR) return (arena_free(&block_arena), block);
 				condition = eval(a, ns, node->AST_WHILE.condition);
-				if (condition.type == ERR) return condition;
+				if (condition.type == ERR) return (arena_free(&block_arena), condition);
 			}
+			arena_free(&block_arena);
 			return (Element) { ELE_NULL };
 		}
 		// LITERALS
