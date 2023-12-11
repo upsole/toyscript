@@ -73,6 +73,7 @@ String	str_dup(Arena *a, String s);
 String	str_slice(String s, u64 begin, u64 end);
 bool 	str_eq(String a, String b);
 String	str_fmt(Arena *a, char *fmt, ...);
+char 	*str_chr(String s, char c);
 String 	str_concat(Arena *a, String s1, String s2);
 String 	str_concat_n(Arena *a, int count, ...);
 char	*str_dupc(Arena *a, String s);

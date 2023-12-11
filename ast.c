@@ -179,10 +179,36 @@ priv AST *parse_bool(Parser *p)
 {
 	return ast_alloc(p->arena, (AST) { AST_BOOL, .AST_BOOL = {p->cur_token.type == TRUE}});
 }
-
+priv String read_escapes(Parser *p, String raw);
 priv AST *parse_string(Parser *p)
 {
-	return ast_alloc(p->arena, (AST) { AST_STR, .AST_STR =  p->cur_token.lit });
+	String raw = p->cur_token.lit;
+	String res = {0};
+	if (str_chr(raw, '\\'))
+		res = read_escapes(p, raw); // XXX diff signature
+	else
+		res = str_dup(p->arena, raw);
+	return ast_alloc(p->arena, (AST) { AST_STR, .AST_STR = res });
+}
+
+priv String read_escapes(Parser *p, String raw)
+{
+	char *buf = arena_alloc(p->arena, 0);
+	u64 len = 0;
+	for (int i = 0; i < raw.len; i++) {
+		arena_alloc(p->arena, 1);
+		if (raw.buf[i] == '\\') {
+			i++;
+			if (raw.buf[i] == 'n')
+				memcpy(buf + len, "\n", 1);
+			else
+				memcpy(buf + len, raw.buf + i, 1);
+		} else {
+			memcpy(buf + len, raw.buf + i, 1);
+		}
+		len++;
+	}
+	return (String) { buf, len };
 }
 
 priv AST *parse_ident(Parser *p)
@@ -473,7 +499,7 @@ priv Precedence PRECEDENCE(TokenType type)
 AST *ast_alloc(Arena *a, AST node)
 {
 	AST	*ptr = arena_alloc(a, sizeof(AST));
-	if (node.type == AST_STR || node.type == AST_IDENT)
+	if (node.type == AST_IDENT) // XXX where is it better to alloc (parse_string now allocs)
 		node.AST_STR = str_dup(a, node.AST_STR);
 	if (node.type == AST_VAL)
 		node.AST_VAL.name = str_dup(a, node.AST_VAL.name);

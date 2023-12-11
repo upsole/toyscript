@@ -280,6 +280,13 @@ void strpush(StrList *l, String s)
 	l->len++;
 }
 
+char *str_chr(String s, char c)
+{
+	for (int i = 0; i < s.len; i++)
+		if (s.buf[i] == c) return &s.buf[i];
+	return NULL;
+}
+
 String str_read_file(Arena *a, char *filename)
 {
 	String s = {0};
@@ -295,3 +302,5 @@ String str_read_file(Arena *a, char *filename)
 	fclose(f);
 	return s;
 }
+
+
