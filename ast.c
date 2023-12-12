@@ -61,6 +61,7 @@ ASTList *parse_block_statement(Parser *p)
 			astpush(block, tmp);
 		next_token(p);
 	}
+	if (p->next_token.type == SEMICOLON) next_token(p);
 	return block;
 }
 
@@ -331,6 +332,7 @@ priv AST *parse_while_statement(Parser *p)
 	ASTList *body = parse_block_statement(p);
 	if (!body) return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_WHILE.body = body;
+
 	return res;
 }
 
@@ -576,7 +578,7 @@ priv void parser_error(Parser *p, String msg)
 // STDOUT
 void parser_print_errors(Parser *p)
 {
-	str_print(str("Parser has errors.\n"));
+	str_print(str("\nParser has errors.\n"));
 	for (StrNode *tmp = p->errors->head; tmp; tmp = tmp->next)
 		str_print(tmp->string), str_print(str("\n"));
 }

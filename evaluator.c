@@ -13,7 +13,7 @@ priv Namespace *ns_copy(Arena *a, Namespace *ns);
 priv ElemList *elemlist(Arena *a);
 priv ElemList *elemlist_copy(Arena *a, ElemList *lst);
 priv void elempush(ElemList *lst, Element el);
-priv ElemArray *elemarray(Arena *a, int len);
+ElemArray *elemarray(Arena *a, int len);
 priv ElemArray *elemarray_copy(Arena *a, ElemArray *arr);
 
 priv Element BUILTINS(String name);
@@ -914,7 +914,7 @@ priv ElemList *elemlist_copy(Arena *a, ElemList *lst)
 }
 
 // ~ELEMARRAY
-priv ElemArray *elemarray(Arena *a, int len)
+ElemArray *elemarray(Arena *a, int len)
 {
 	ElemArray *arr = arena_alloc_zero(a, sizeof(ElemArray));
 	arr->items = arena_alloc(a, len * sizeof(Element));

@@ -14,6 +14,8 @@ TestResult test_function_eval(Arena *a);
 TestResult test_function_call(Arena *a);
 TestResult test_builtin_function(Arena *a);
 TestResult test_assignment(Arena *a);
+TestResult test_while_loop(Arena *a);
+TestResult test_arr_concat(Arena *a);
 
 int main(int ac, char **av)
 {
@@ -34,6 +36,8 @@ int main(int ac, char **av)
 			{str("CALL"), &test_function_call},
 			{str("BUILTIN"), &test_builtin_function},
 			{str("ASSIGNMENT"), &test_assignment},
+			{str("WHILE"), &test_while_loop},
+			{str("WHILE"), &test_arr_concat},
 	};
 
 	if (ac < 2) {
@@ -235,6 +239,7 @@ TestResult test_return_eval(Arena *a)
 	struct elem_input tests[] = {
 					{str("return 10;"), expected10, INT},
 				    {str("return false;"), {.type = BOOL, .BOOL = false}, BOOL},
+				    {str("return ;"), { ELE_NULL }, ELE_NULL},
 				    {cstr(nested_return), {.type = INT, .INT = 1}, INT} 
 	};
 	for (int i = 0; i < arrlen(tests); i++) {
@@ -411,17 +416,114 @@ TestResult test_assignment(Arena *a)
 	return pass();
 }
 
+priv bool elem_eq(Element e1, Element e2);
+priv bool elemlist_eq(ElemList *l1, ElemList *l2)
+{
+	if (l1->len != l2->len)
+		return false;
+	for (ElemNode *n1 = l1->head, *n2 = l2->head; 
+			n1 && n2; n1 = n1->next, n2 = n2->next)
+		if (!elem_eq(n1->element, n2->element)) return false;
+	return true;
+}
+
+priv bool elemarray_eq(ElemArray *a1, ElemArray *a2)
+{
+	if (a1->len != a2->len)
+		return false;
+	for (int i = 0; i < a1->len; i++)
+		if (!elem_eq(a1->items[i], a2->items[i]))
+			return false;
+	return true;
+}
+
+priv bool elem_eq(Element e1, Element e2)
+{
+	if (e1.type != e2.type) return false;
+	switch (e1.type) {
+		case ELE_NULL: return true;
+		case INT: return e1.INT == e2.INT;
+		case BOOL: return e1.BOOL == e2.BOOL;
+		case ERR: case STR: return str_eq(e1.STR, e2.STR);
+		case TYPE: return e1.TYPE == e2.TYPE;
+		case ARRAY: return elemarray_eq(e1.ARRAY, e2.ARRAY);
+		case LIST: return elemlist_eq(e1.LIST, e2.LIST);
+		case RETURN: return elem_eq(*e1.RETURN.value, *e2.RETURN.value);
+		case FUNCTION: return astlist_eq(e1.FUNCTION.params, e2.FUNCTION.params) 
+				&& astlist_eq(e1.FUNCTION.body, e1.FUNCTION.body);
+		case BUILTIN: return false;
+	}
+	return (NEVER(1 && "Type slipped through switch"));
+}
+
+ElemArray *elemarray(Arena *a, int len);
+TestResult test_arr_concat(Arena *a)
+{
+	ElemArray *arr1 = elemarray(a, 3);
+	arr1->items[0] = (Element) { INT, .INT = 0 };
+	arr1->items[1] = (Element) { INT, .INT = 1 };
+	arr1->items[2] = (Element) { INT, .INT = 2 };
+
+	ElemArray *arr2nested = elemarray(a, 3);
+	arr2nested->items[0] = (Element) { INT, .INT = 0 };
+	arr2nested->items[1] = (Element) { INT, .INT = 1 };
+	arr2nested->items[2] = (Element) { INT, .INT = 2 };
+	ElemArray *arr2 = elemarray(a, 1);
+	arr2->items[0] = (Element) { ARRAY, .ARRAY = arr2nested };
+
+	struct {
+		String input;
+		Element expected;
+	} tests[] = {
+		{ str("[0] + [1, 2];"), (Element) {ARRAY, .ARRAY = arr1 } },
+		{ str("[] + [];"), (Element) {ARRAY, .ARRAY = elemarray(a, 0) } },
+		{ str("[] + [[0, 1, 2]];"), (Element) {ARRAY, .ARRAY = arr2 } },
+	};
+	for (int i = 0; i < arrlen(tests); i++) {
+		Element res = eval_wrapper(a, tests[i].input);
+		if (TEST(res.type != tests[i].expected.type)) 
+			return fail(str("Type mismatch"));
+		if (TEST(!elem_eq(res, tests[i].expected)))
+			return fail(str("Value mismatch"));
+	}
+	return pass();
+}
+
+TestResult test_while_loop(Arena *a)
+{
+	struct {
+		String input;
+		Element expected;
+	} tests[] = {
+		{ str("var i = 0; while (i < 10) { i = i + 1; } i;"), (Element) { INT, .INT = 10 }},
+		{ str("var i = 0; var j = 5; while (i < 10) { var j = i; i = i + 1; j = j + 2; } j;"), (Element) { INT, .INT = 5 }},
+		{ str("var i = 0; while (i < 10 { i = i + 1; }"), (Element) { ELE_NULL }}, // Parser error expected
+	};
+
+	for (int i = 0; i < arrlen(tests); i++) {
+		Element res = eval_wrapper(a, tests[i].input);
+		if (res.type == ELE_NULL && tests[i].expected.type == ELE_NULL)
+			return pass();
+		if (res.type == ELE_NULL && !tests[i].expected.type == ELE_NULL)
+			return fail(str(""));
+		if (res.TYPE == INT) {
+			if(TEST(res.INT != tests[i].expected.INT))
+				return fail(str("Value mismatch"));
+		}
+	}
+	return pass();
+}
+
 /* // Helpers */
 Element eval_wrapper(Arena *a, String input)
 {
-	Lexer *l= lexer(a, input);
-	Parser *p= parser(a, l);
+	Lexer *l = lexer(a, input);
+	Parser *p = parser(a, l);
 	Namespace *ns = ns_create(a, 16);
 	AST *prog = parse_program(p);
 	if (p->errors) {
-		str_print(str("KO\n")); 
 		parser_print_errors(p);
-		fail(str("Parser has errors\n"));
+		return (Element) { ELE_NULL };
 	}
 	return eval(a, ns, prog);
 }
