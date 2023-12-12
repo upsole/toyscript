@@ -57,8 +57,9 @@ typedef struct StrList {
 
 #define str(lit) ((String) { lit, (sizeof(lit) - 1) })
 #define cstr(s) ((String) { s, ((u32)(strlen(s))) })
-#define _NUMARGS(...) (sizeof((String[]){__VA_ARGS__}) / sizeof(String))
-#define CONCAT(a, ...) (str_concat_n(a, _NUMARGS(__VA_ARGS__), __VA_ARGS__))
+#define fmt(s) (int)(s).len, (s).buf
+/* #define _NUMARGS(...) (sizeof((String[]){__VA_ARGS__}) / sizeof(String)) */
+/* #define CONCAT(a, ...) (str_concat_n(a, _NUMARGS(__VA_ARGS__), __VA_ARGS__)) */
 
 Arena	*arena(u64 cap);
 void 	arena_reset(Arena *a);
