@@ -33,7 +33,7 @@ priv int exec_file(char *filename)
 		str_print(exit_elem.ERR), str_print(str("\n"));
 		return 1;
 	}
-	return (exit_elem.type == INT) ? exit_elem.INT : 0;
+	return (exit_elem.type == INT) ? (i32)exit_elem.INT : 0;
 }
 
 priv String read_stdin(Arena *a);

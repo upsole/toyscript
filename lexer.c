@@ -157,7 +157,7 @@ Token lexer_token(Lexer *l)
 
 priv String lexer_read_ident(Lexer *l)
 {
-	u64 begin = l->pos;
+	u32 begin = l->pos;
 	while (is_alpha(l->ch) || is_num(l->ch) || l->ch == '?')
 		lexer_read(l);
 	return str_slice(l->input, begin, l->pos);
@@ -165,7 +165,7 @@ priv String lexer_read_ident(Lexer *l)
 
 priv String lexer_read_int(Lexer *l)
 {
-	u64 begin = l->pos;
+	u32 begin = l->pos;
 	while (is_num(l->ch))
 		lexer_read(l);
 	return str_slice(l->input, begin, l->pos);
@@ -174,7 +174,7 @@ priv String lexer_read_int(Lexer *l)
 priv String lexer_read_string(Lexer *l)
 {
 	lexer_read(l); // skip first "
-	u64 begin = l->pos;
+	u32 begin = l->pos;
 	while (l->ch != '"')
 		lexer_read(l);
 	return str_slice(l->input, begin, l->pos);

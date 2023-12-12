@@ -38,7 +38,7 @@ typedef struct ArenaTmp {
 
 typedef struct String {
 	char	*buf;
-	u64		len;
+	u32		len;
 }	String;
 
 typedef struct StrNode StrNode;
@@ -56,7 +56,7 @@ typedef struct StrList {
 // BASE API
 
 #define str(lit) ((String) { lit, (sizeof(lit) - 1) })
-#define cstr(s) ((String) { s, (strlen(s)) })
+#define cstr(s) ((String) { s, ((u32)(strlen(s))) })
 #define _NUMARGS(...) (sizeof((String[]){__VA_ARGS__}) / sizeof(String))
 #define CONCAT(a, ...) (str_concat_n(a, _NUMARGS(__VA_ARGS__), __VA_ARGS__))
 
@@ -70,7 +70,7 @@ void	arena_stats(Arena *a, char *file, i32 line);
 
 void 	str_print(String s);
 String	str_dup(Arena *a, String s);
-String	str_slice(String s, u64 begin, u64 end);
+String	str_slice(String s, u32 begin, u32 end);
 bool 	str_eq(String a, String b);
 String	str_fmt(Arena *a, char *fmt, ...);
 char 	*str_chr(String s, char c);

@@ -195,7 +195,7 @@ priv AST *parse_string(Parser *p)
 priv String read_escapes(Parser *p, String raw)
 {
 	char *buf = arena_alloc(p->arena, 0);
-	u64 len = 0;
+	u32 len = 0;
 	for (int i = 0; i < raw.len; i++) {
 		arena_alloc(p->arena, 1);
 		if (raw.buf[i] == '\\') {
@@ -664,7 +664,7 @@ String astlist_str(Arena *a, ASTList *lst)
 	if (!lst) return str("");
 	char *buf = arena_alloc(a, 1);
 	buf[0] = '[';
-	u64 len = 1;
+	u32 len = 1;
 	for (ASTNode *cursor = lst->head; cursor; cursor = cursor->next) {
 		String tmp = ast_str(a, cursor->ast);
 		arena_alloc(a, tmp.len);
@@ -681,7 +681,7 @@ String astlist_str(Arena *a, ASTList *lst)
 	arena_alloc(a, tmp.len);
 	memcpy(buf + len, tmp.buf, tmp.len);
 	len += tmp.len;
-	return (String){ buf, len };
+	return (String) { buf, len };
 }
 
 void ast_aprint(Arena *a, AST *node)

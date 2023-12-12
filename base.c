@@ -150,7 +150,7 @@ void str_print(String s)
 		write(1, &s.buf[i], 1);
 }
 
-String str_slice(String s, u64 begin, u64 end)
+String str_slice(String s, u32 begin, u32 end)
 {
 	begin = MIN(begin, s.len);
 	end = MIN(end, s.len);
@@ -192,7 +192,7 @@ String str_concat_n(Arena *a, int count, ...)
 	va_list args;
 	va_start(args, count);
 	char *buf = NULL;
-	u64 len = 0;
+	u32 len = 0;
 	for (int i = 0; i < count; i++) {
 		String tmp = va_arg(args, String);
 		if (i == 0)
@@ -211,10 +211,13 @@ priv String str_fv(Arena *a, char *fmt, va_list src)
 	String s;
 	va_list dest;
 	va_copy(dest, src);
-	u64 size = vsnprintf(0, 0, fmt, src) + 1;
-	s.buf = arena_alloc(a, size);
-	vsnprintf((char *)s.buf, size, fmt, dest);
-	s.len = size - 1;
+	int size = vsnprintf(0, 0, fmt, src) + 1;
+	if (NEVER(size == -1))
+		return (String) {0};
+	u64 usize = (u64) size;
+	s.buf = arena_alloc(a, usize);
+	vsnprintf((char *)s.buf, usize, fmt, dest);
+	s.len = (u32) usize - 1;
 	va_end(dest);
 	return s;
 }
@@ -294,7 +297,7 @@ String str_read_file(Arena *a, char *filename)
 	if (!f) 
 		dprintf(2, "!PANIC: File %s not found.\n", filename), exit(1);
 	fseek(f, 0, SEEK_END);
-	u64 len = ftell(f);
+	u32 len = (u32) ftell(f);
 	fseek(f, 0, SEEK_SET);
 	s.buf = arena_alloc(a, len);
 	s.len = len;

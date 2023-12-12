@@ -4,7 +4,7 @@
 
 #define IMMUTABLE 0
 #define MUTABLE 1
-priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap); 
+priv Namespace *ns_inner(Arena *a, Namespace *parent, u32 cap); 
 priv Bind *ns_get(Namespace *ns, String key);
 priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable); 
 priv int ns_update(Namespace *ns, String key, Element elem);
@@ -13,7 +13,7 @@ priv Namespace *ns_copy(Arena *a, Namespace *ns);
 priv ElemList *elemlist(Arena *a);
 priv ElemList *elemlist_copy(Arena *a, ElemList *lst);
 priv void elempush(ElemList *lst, Element el);
-ElemArray *elemarray(Arena *a, int len);
+ElemArray *elemarray(Arena *a, u32 len);
 priv ElemArray *elemarray_copy(Arena *a, ElemArray *arr);
 
 priv Element BUILTINS(String name);
@@ -598,7 +598,7 @@ priv Element read_file_to_elem(Arena *a, char *filename)
 	if (!f) 
 		return error(str_fmt(a, "File '%s' not found", filename));
 	fseek(f, 0, SEEK_END);
-	u64 len = ftell(f);
+	u32 len = (u32) ftell(f);
 	fseek(f, 0, SEEK_SET);
 	s.buf = arena_alloc(a, len);
 	s.len = len;
@@ -688,7 +688,7 @@ priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
 		return arg0;
 	}
 	if (arg0.type == ARRAY) {
-		int a0_len = arg0.ARRAY->len;
+		u32 a0_len = arg0.ARRAY->len;
 		ElemArray *res = elemarray(a, (a0_len + 1));
 		for (int i = 0; i < a0_len; i++)
 			res->items[i] = arg0.ARRAY->items[i];
@@ -795,7 +795,7 @@ priv String array_to_string(Arena *a, ElemArray *arr)
 	if (!arr) return str("");
 	char *buf = arena_alloc(a, 1);
 	buf[0] = '[';
-	u64 len = 1;
+	u32 len = 1;
 	for (int i = 0; i < arr->len; i++) {
 		String tmp = to_string(a, arr->items[i]);
 		arena_alloc(a, tmp.len);
@@ -820,7 +820,7 @@ priv String list_to_string(Arena *a, ElemList *lst)
 	if (!lst) return str("");
 	char *buf = arena_alloc(a, 1);
 	buf[0] = '[';
-	u64 len = 1;
+	u32 len = 1;
 	for (ElemNode *cursor = lst->head; cursor; cursor = cursor->next) {
 		String tmp = to_string(a, cursor->element);
 		arena_alloc(a, tmp.len);
@@ -914,7 +914,7 @@ priv ElemList *elemlist_copy(Arena *a, ElemList *lst)
 }
 
 // ~ELEMARRAY
-ElemArray *elemarray(Arena *a, int len)
+ElemArray *elemarray(Arena *a, u32 len)
 {
 	ElemArray *arr = arena_alloc_zero(a, sizeof(ElemArray));
 	arr->items = arena_alloc(a, len * sizeof(Element));
@@ -959,7 +959,7 @@ priv ElemArray *elemarray_copy(Arena *a, ElemArray *arr)
 }
 
 // ~NAMESPACE
-Namespace *ns_create(Arena *a, u64 cap)
+Namespace *ns_create(Arena *a, u32 cap)
 {
 	Namespace *ns = arena_alloc(a, sizeof(Namespace));
 	ns->arena = a;
@@ -970,20 +970,20 @@ Namespace *ns_create(Arena *a, u64 cap)
 	return ns;
 }
 
-priv Namespace *ns_inner(Arena *a, Namespace *parent, u64 cap)
+priv Namespace *ns_inner(Arena *a, Namespace *parent, u32 cap)
 {
 	Namespace *ns = ns_create(a, cap);
 	ns->parent = parent;
 	return ns;
 }
 
-priv u64 hash(String key) // FNV hash
+priv u32 hash(String key) // FNV hash
 {
 	char *buf = key.buf;
-	u64 hash = 1099511628211LU;
+	u32 hash = 2166136261U;
 	for (int i = 0; i < key.len; i++) {
-		hash ^= (u64)(u8)*buf;
-		hash *= 14695981039346656037LU;
+		hash ^= (u32)(u8)*buf;
+		hash *= 16777619U;
 		buf++;
 	}
 	return hash;
@@ -1001,7 +1001,7 @@ priv Bind *bind_alloc(Arena *a, String key, Element el, bool is_mutable)
 
 priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable)
 {
-	u64 id = hash(key) % ns->cap;
+	u32 id = hash(key) % ns->cap;
 	for (Bind *b = ns->values[id]; b; b = b->next) {
 		if (str_eq(key, b->key)) { // if key used, update
 			if (is_mutable) {
@@ -1021,7 +1021,7 @@ priv int ns_put(Namespace *ns, String key, Element elem, bool is_mutable)
 
 priv Bind *ns_get_inner(Namespace *ns, String key)
 {
-	u64 id = hash(key) % ns->cap;
+	u32 id = hash(key) % ns->cap;
 	for (Bind *tmp = ns->values[id]; tmp; tmp = tmp->next)
 		if (str_eq(key, tmp->key))
 			return tmp;

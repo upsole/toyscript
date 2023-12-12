@@ -18,8 +18,8 @@ typedef struct Token {
 
 typedef struct Lexer {
 	String	input;
-	u64		pos;
-	u64		next;
+	u32		pos;
+	u32		next;
 	char	ch;
 }	Lexer;
 
@@ -41,7 +41,7 @@ typedef struct ASTList {
 	Arena	*arena;
 	ASTNode	*head;
 	ASTNode	*tail;
-	int	len;
+	u32	len;
 }	ASTList;
 
 struct AST {
@@ -108,12 +108,12 @@ struct ElemList {
 	Arena	*arena;
 	ElemNode *head;
 	ElemNode *tail;
-	int len;
+	u32 len;
 };
 
 struct ElemArray {
 	Element *items;
-	int	len;
+	u32	len;
 };
 // ~NAMESPACE
 typedef struct Bind Bind;
@@ -126,8 +126,8 @@ struct Bind {
 
 struct Namespace {
 	Arena *arena;
-	u64 len;
-	u64 cap;
+	u32 len;
+	u32 cap;
 	Bind **values;
 	Namespace *parent;
 };
@@ -149,6 +149,6 @@ Element	eval(Arena *a, Namespace *ns, AST *node);
 String	to_string(Arena *a, Element e);
 String	type_str(ElementType type);
 
-Namespace *ns_create(Arena *a, u64 cap);
+Namespace *ns_create(Arena *a, u32 cap);
 
 #endif 
