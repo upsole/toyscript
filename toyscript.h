@@ -3,12 +3,11 @@
 
 // ~LEXER
 typedef enum TokenType { 
-	END, ILLEGAL, SEMICOLON, COMMA, BANG, STAR, 
-	SLASH, MOD, GT, LT, LPAREN, RPAREN, LBRACE, 
-	RBRACE, LBRACKET, RBRACKET, PLUS, MINUS, ASSIGN, 
-	EQ, NOT_EQ, TK_INT, TK_STRING, TK_IDENT, TK_VAL, 
-	TK_VAR, TK_FN, TK_RETURN, IF, ELSE, TK_WHILE,
-	TRUE, FALSE, TK_NULL
+	TK_END, TK_ILLEGAL, TK_SEMICOLON, TK_COMMA, TK_BANG, TK_STAR, 
+	TK_SLASH, TK_MOD, TK_GT, TK_LT, TK_LPAREN, TK_RPAREN, TK_LBRACE, 
+	TK_RBRACE, TK_LBRACKET, TK_RBRACKET, TK_PLUS, TK_MINUS, TK_ASSIGN, 
+	TK_EQ, TK_NOT_EQ, TK_INT, TK_STRING, TK_IDENT, TK_VAL, TK_VAR, TK_FN, 
+	TK_RETURN, TK_IF, TK_ELSE, TK_WHILE, TK_TRUE, TK_FALSE, TK_NIL
 } TokenType;
 
 typedef struct Token {
@@ -26,10 +25,11 @@ typedef struct Lexer {
 // ~AST
 typedef struct AST AST;
 typedef struct ASTNode ASTNode;
-typedef enum ASTType { AST_VAL, AST_VAR, AST_RETURN, AST_ASSIGN, // STATEMENTS
+typedef enum ASTType { 
+	AST_VAL, AST_VAR, AST_RETURN, AST_ASSIGN, AST_WHILE, // STATEMENTS
 	AST_IDENT, AST_INT, AST_BOOL, AST_STR, AST_LIST, AST_FN, // VALUES
 	AST_PREFIX, AST_INFIX, AST_COND, AST_CALL, AST_INDEX, // EXPRESSIONS
-	AST_WHILE, AST_NULL, AST_PROGRAM
+	AST_NULL, AST_PROGRAM
 } ASTType;
 
 struct ASTNode {
@@ -80,12 +80,12 @@ typedef struct Namespace Namespace;
 typedef struct ElemList	ElemList;
 typedef struct ElemArray ElemArray;
 
-typedef enum ElementType { ELE_NULL, ERR, INT, BOOL, STR, LIST, ARRAY, RETURN, FUNCTION, BUILTIN, TYPE } ElementType;
+typedef enum ElementType { NIL, ERR, INT, BOOL, STR, LIST, ARRAY, RETURN, FUNCTION, BUILTIN, TYPE } ElementType;
 typedef Element (*BuiltinFunction)(Arena *a, Namespace *ns, ElemArray *args);
 struct Element {
 	ElementType type;
 	union {
-		struct		ELE_NULL {} ELE_NULL;
+		struct		NIL {} NIL;
 		String 		ERR;
 		long 		INT;
 		bool 		BOOL;

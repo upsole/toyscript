@@ -51,7 +51,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		// STATEMENTS
 		case AST_VAL: {
 			if (NEVER(!node->AST_VAL.value))
-				return (Element) { ELE_NULL };
+				return (Element) { NIL };
 			Element value = eval(a, ns, node->AST_VAL.value);
 			if (value.type == ERR) return value;
 			if(ns_put(ns, node->AST_VAL.name, value, IMMUTABLE) == -1)
@@ -60,7 +60,7 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		} break;
 		case AST_VAR: {
 			if (NEVER(!node->AST_VAR.value))
-				return (Element) { ELE_NULL };
+				return (Element) { NIL };
 			Element value = {0};
 			if (node->AST_VAR.value->type == AST_LIST)
 				value = eval_list(a, ns, node->AST_VAR.value->AST_LIST);
@@ -72,14 +72,14 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		} break;
 		case AST_RETURN: {
 			if (NEVER(!node->AST_RETURN.value))
-				return (Element) { ELE_NULL };
+				return (Element) { NIL };
 			Element value = eval(a, ns, node->AST_RETURN.value);
 			if (value.type == ERR) return value;
 			return (Element) { RETURN, .RETURN = { elem_alloc(a, value) }};
 		} break;
 		case AST_ASSIGN: {
 			if (NEVER(!node->AST_ASSIGN.left || !node->AST_ASSIGN.right)) 
-				return (Element) { ELE_NULL };
+				return (Element) { NIL };
 			return eval_assignement(a, ns, node->AST_ASSIGN);
 		} break;
 		// EXPRESSIONS
@@ -135,11 +135,11 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 				if (condition.type == ERR) return (arena_free(&block_arena), condition);
 			}
 			arena_free(&block_arena);
-			return (Element) { ELE_NULL };
+			return (Element) { NIL };
 		}
 		// LITERALS
 		case AST_NULL:
-			return (Element) { ELE_NULL };
+			return (Element) { NIL };
 		case AST_INT:
 			return (Element) { INT, .INT =  node->AST_INT.value  };
 		case AST_BOOL:
@@ -147,19 +147,19 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 		case AST_STR:
 			return (Element) { STR, .STR = node->AST_STR };
 	}
-	return (Element) { ELE_NULL };
+	return (Element) { NIL };
 }
 
 priv Element eval_program(Arena *a, Namespace *ns, AST *node)
 {
 	if (NEVER(node->type != AST_PROGRAM))
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	Element	res = {0};
 	for (ASTNode *tmp = node->AST_LIST->head; tmp; tmp = tmp->next) {
 		res = eval(a, ns, tmp->ast);
 		if (res.type == RETURN) {
 			if (NEVER(!res.RETURN.value))
-				return (Element) { ELE_NULL };
+				return (Element) { NIL };
 			return (*res.RETURN.value);
 		} 
 		if (res.type == ERR) {
@@ -176,7 +176,7 @@ priv Element eval_block(Arena *a, Namespace *ns, ASTList *list)
 		res = eval(a, ns, tmp->ast);
 		if (res.type == RETURN) {
 			if (NEVER(!res.RETURN.value))
-				return (Element) { ELE_NULL };
+				return (Element) { NIL };
 			return res; // Return without unwrapping so program ends - this is the main difference with eval_program
 		} 
 		if (res.type == ERR) {
@@ -209,7 +209,7 @@ priv ElemArray *elemarray_from_ast(Arena *a, Namespace *ns, ASTList *lst);
 priv Element eval_array(Arena *a, Namespace *ns, ASTList *lst) 
 {
 	if(NEVER(!lst))
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	ElemArray *res = elemarray_from_ast(a, ns, lst);
 	if (res->len == 1 && res->items[0].type == ERR)
 		return res->items[0];
@@ -220,7 +220,7 @@ priv ElemList *elemlist_from_ast(Arena *a, Namespace *ns, ASTList *lst);
 priv Element eval_list(Arena *a, Namespace *ns, ASTList *lst) 
 {
 	if(NEVER(!lst))
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	ElemList *res = elemlist_from_ast(a, ns, lst);
 	if (res->len == 1 && res->head->element.type == ERR)
 		return res->head->element;
@@ -246,7 +246,7 @@ priv Element eval_array_index(Arena *a, Element left, Element index)
 {
 	i64	id = index.INT;
 	if (id < 0 || id >= left.ARRAY->len)
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	return left.ARRAY->items[id];
 }
 
@@ -254,7 +254,7 @@ priv Element eval_list_index(Arena *a, Element left, Element index)
 {
 	i64	id = index.INT;
 	if (id < 0 || id >= left.LIST->len)
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	ElemNode *tmp = left.LIST->head;
 	for (int i = 0; i < id; i++)
 		tmp = tmp->next;
@@ -266,7 +266,7 @@ priv bool is_truthy(Element e)
 	switch (e.type) {
 		case ERR:
 			return false;
-		case ELE_NULL:
+		case NIL:
 			return false;
 		case INT:
 			return (e.INT != 0);
@@ -282,14 +282,14 @@ priv bool is_truthy(Element e)
 priv Element eval_cond_expression(Arena *a, Namespace *ns, AST *node)
 {
 	if (NEVER(node->type != AST_COND))
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	Element condition = eval(a, ns, node->AST_COND.condition);
 	if (is_truthy(condition)) {
 		return eval_block(a, ns, node->AST_COND.consequence);
 	} else if (node->AST_COND.alternative) {
 		return eval_block(a, ns, node->AST_COND.alternative);
 	} else {
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	}
 }
 
@@ -315,7 +315,7 @@ priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, Ele
 	ASTNode *params_node = fn.params->head;
 	for (int i = 0; i < args->len; i++) {
 		if (NEVER(!params_node))
-			return (arena_free(&call_arena), (Element) { ELE_NULL });
+			return (arena_free(&call_arena), (Element) { NIL });
 		ns_put(call_ns, params_node->ast->AST_STR, args->items[i], MUTABLE);
 		params_node = params_node->next;
 	}
@@ -357,7 +357,7 @@ priv Element eval_bang(Arena *a, Element right)
 			return (Element) { BOOL, .BOOL = !right.BOOL };
 		case INT:
 			return (Element) { BOOL, .BOOL = (right.INT == 0) };
-		case ELE_NULL:
+		case NIL:
 			return (Element) { BOOL, .BOOL = false };
 		default:
 			return error(CONCAT(a, str("Invalid operation: !"), type_str(right.type)));
@@ -523,7 +523,7 @@ priv Element BUILTINS(String name)
 		return (Element) { BUILTIN, .BUILTIN = &builtin_concat };
 	if (str_eq(str("slurp"), name))
 		return (Element) { BUILTIN, .BUILTIN = &builtin_slurp };
-	return (Element) { ELE_NULL };	
+	return (Element) { NIL };	
 }
 priv Element elemlist_concat(Arena *a, ElemList *left, ElemList *right);
 priv Element elemarray_concat(Arena *a, ElemArray *left, ElemArray *right);
@@ -618,7 +618,7 @@ priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args)
 	if (arg0.type == LIST) {
 		ElemNode *cdr = arg0.LIST->head;
 		if (!cdr || !cdr->next)
-			return (Element) { ELE_NULL };
+			return (Element) { NIL };
 		ElemList *lst = elemlist(a);
 		lst->len = (arg0.LIST->len == 0) ? 0 : arg0.LIST->len - 1;
 		lst->head = cdr->next;
@@ -626,7 +626,7 @@ priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args)
 	}
 	if (arg0.type == ARRAY) {
 		if (arg0.ARRAY->len < 2)
-			return (Element) { ELE_NULL };
+			return (Element) { NIL };
 		ElemArray *arr = elemarray(a, arg0.ARRAY->len - 1);
 		for (int i = 1; i < arg0.ARRAY->len; i++)
 			arr->items[i - 1] = arg0.ARRAY->items[i];
@@ -637,7 +637,7 @@ priv Element builtin_cdr(Arena *a, Namespace *ns, ElemArray *args)
 			return (Element) { STR, .STR = str("") };
 		return (Element) { STR, .STR = str_slice(arg0.STR, 1, arg0.STR.len) };
 	}
-	if (arg0.type == ELE_NULL)  
+	if (arg0.type == NIL)  
 		return arg0;
 	return error(CONCAT(a, str("Wrong type for car, got "),
 				type_str(arg0.type)));
@@ -655,11 +655,11 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 		if (arg0.LIST->head)
 			return arg0.LIST->head->element;
 		else
-			return (Element) { ELE_NULL };
+			return (Element) { NIL };
 	}
 	if (arg0.type == ARRAY) {
 		if (arg0.ARRAY->len < 1)
-			return (Element) { ELE_NULL };
+			return (Element) { NIL };
 		return arg0.ARRAY->items[0];
 	}
 	if (arg0.type == STR) {
@@ -667,7 +667,7 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 			return (Element) { STR, .STR = str("") };
 		return (Element) { STR, .STR = str_slice(arg0.STR, 0, 1) };
 	}
-	if (arg0.type == ELE_NULL)  
+	if (arg0.type == NIL)  
 		return arg0;
 	return error(CONCAT(a, str("Wrong type for car, got "),
 				type_str(arg0.type)));
@@ -713,7 +713,7 @@ priv Element builtin_print(Arena *a, Namespace *ns, ElemArray *args)
 		str_print(to_string(a, args->items[i]));
 	arena_pop_to(a, previous_offset);
 	str_print(str("\n"));
-	return (Element) { ELE_NULL };
+	return (Element) { NIL };
 }
 
 priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args)
@@ -764,7 +764,7 @@ priv String list_to_string(Arena *a, ElemList *lst);
 String	to_string(Arena *a, Element e)
 {
 	switch (e.type) {
-		case ELE_NULL:
+		case NIL:
 			return str("null");
 		case INT:
 			return str_fmt(a, "%ld", e.INT);
@@ -843,7 +843,7 @@ priv String list_to_string(Arena *a, ElemList *lst)
 String	type_str(ElementType type)
 {
 	String strings[] = { 
-		str("NULL"), str("ERR"), str("INT"), 
+		str("NIL"), str("ERR"), str("INT"), 
 		str("BOOL"), str("STR"), str("LIST"), str("ARRAY"),
 		str("RETURN"), str("FUNCTION"), str("BUILTIN"),
 		str("TYPE")

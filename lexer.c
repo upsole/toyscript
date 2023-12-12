@@ -52,82 +52,82 @@ Token lexer_token(Lexer *l)
 			return lexer_token(l);
 		}
 		case '+':
-			t.type = PLUS;
+			t.type = TK_PLUS;
 			t.lit = str("+");
 			break;
 		case '-':
-			t.type = MINUS;
+			t.type = TK_MINUS;
 			t.lit = str("-");
 			break;
 		case ';':
-			t.type = SEMICOLON;
+			t.type = TK_SEMICOLON;
 			t.lit = str(";");
 			break;
 		case ',':
-			t.type = COMMA;
+			t.type = TK_COMMA;
 			t.lit = str(",");
 			break;
 		case '(':
-			t.type = LPAREN;
+			t.type = TK_LPAREN;
 			t.lit = str("(");
 			break;
 		case ')':
-			t.type = RPAREN;
+			t.type = TK_RPAREN;
 			t.lit = str(")");
 			break;
 		case '{':
-			t.type = LBRACE;
+			t.type = TK_LBRACE;
 			t.lit = str("{");
 			break;
 		case '}':
-			t.type = RBRACE;
+			t.type = TK_RBRACE;
 			t.lit = str("}");
 			break;
 		case '[':
-			t.type = LBRACKET;
+			t.type = TK_LBRACKET;
 			t.lit = str("[");
 			break;
 		case ']':
-			t.type = RBRACKET;
+			t.type = TK_RBRACKET;
 			t.lit = str("]");
 			break;
 		case '=':
 			if (lexer_peek(l) == '=') {
-				t.type = EQ;
+				t.type = TK_EQ;
 				t.lit = str("==");
 				lexer_read(l);
 			} else {
-				t.type = ASSIGN;
+				t.type = TK_ASSIGN;
 				t.lit = str("=");
 			}
 			break;
 		case '<':
-			t.type = LT;
+			t.type = TK_LT;
 			t.lit = str("<");
 			break;
 		case '>':
-			t.type = GT;
+			t.type = TK_GT;
 			t.lit = str(">");
 			break;
 		case '*':
-			t.type = STAR;
+			t.type = TK_STAR;
 			t.lit = str("*");
 			break;
 		case '/':
-			t.type = SLASH;
+			t.type = TK_SLASH;
 			t.lit = str("/");
 			break;
 		case '%':
-			t.type = MOD;
+			t.type = TK_MOD;
 			t.lit = str("%");
 			break;
 		case '!':
 			if (lexer_peek(l) == '=') {
-				t.type = NOT_EQ;
+				t.type = TK_NOT_EQ;
 				t.lit = str("!=");
 				lexer_read(l);
 			} else {
-				t.type = BANG;
+				t.type = TK_BANG;
 				t.lit = str("!");
 			}
 			break;
@@ -136,7 +136,7 @@ Token lexer_token(Lexer *l)
 			t.lit = lexer_read_string(l);
 			break;
 		case 0:
-			return (Token) { END, str("") };
+			return (Token) { TK_END, str("") };
 		default:
 			if (is_alpha(l->ch)) {
 				t.lit = lexer_read_ident(l);
@@ -147,7 +147,7 @@ Token lexer_token(Lexer *l)
 				t.type = TK_INT;
 				return t;
 			} else {
-				t.type = ILLEGAL;
+				t.type = TK_ILLEGAL;
 				t.lit = (String){&l->ch, 1};
 			}
 	}
@@ -186,12 +186,12 @@ priv TokenType keywords(String s)
 	if (str_eq(s, str("var"))) return TK_VAR;
 	if (str_eq(s, str("fn"))) return TK_FN;
 	if (str_eq(s, str("return"))) return TK_RETURN;
-	if (str_eq(s, str("if"))) return IF;
-	if (str_eq(s, str("else"))) return ELSE;
+	if (str_eq(s, str("if"))) return TK_IF;
+	if (str_eq(s, str("else"))) return TK_ELSE;
 	if (str_eq(s, str("while"))) return TK_WHILE;
-	if (str_eq(s, str("true"))) return TRUE;
-	if (str_eq(s, str("false"))) return FALSE;
-	if (str_eq(s, str("NULL"))) return TK_NULL;
+	if (str_eq(s, str("true"))) return TK_TRUE;
+	if (str_eq(s, str("false"))) return TK_FALSE;
+	if (str_eq(s, str("NIL"))) return TK_NIL;
 	return TK_IDENT;
 }
 

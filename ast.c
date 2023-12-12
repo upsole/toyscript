@@ -40,7 +40,7 @@ AST	*parse_program(Parser *p)
 	AST	*program = ast_alloc(p->arena,  
 			(AST) { .type = AST_PROGRAM, .AST_LIST = astlist(p->arena) });
 
-	while (p->cur_token.type != END) {
+	while (p->cur_token.type != TK_END) {
 		tmp = parse_statement(p);
 		if (p->errors) return NULL;
 		if (tmp) 
@@ -55,13 +55,13 @@ ASTList *parse_block_statement(Parser *p)
 	AST	*tmp;
 	ASTList	*block = astlist(p->arena);
 	next_token(p);
-	while (p->cur_token.type != RBRACE) {
+	while (p->cur_token.type != TK_RBRACE) {
 		tmp = parse_statement(p);
 		if (tmp) 
 			astpush(block, tmp);
 		next_token(p);
 	}
-	if (p->next_token.type == SEMICOLON) next_token(p);
+	if (p->next_token.type == TK_SEMICOLON) next_token(p);
 	return block;
 }
 
@@ -91,7 +91,7 @@ priv AST *parse_return(Parser *p)
 	next_token(p);
 	AST *res = ast_alloc(p->arena, (AST) { AST_RETURN, .AST_RETURN = { NULL }});
 	AST *right;
-	if (p->cur_token.type == SEMICOLON) {
+	if (p->cur_token.type == TK_SEMICOLON) {
 		right = ast_alloc(p->arena, (AST) { AST_NULL });
 	} else
 		right = parse_expression(p, LOWEST);
@@ -100,7 +100,7 @@ priv AST *parse_return(Parser *p)
 		return NULL;
 	}
 	res->AST_RETURN.value = right;
-	if (p->next_token.type == SEMICOLON) next_token(p);
+	if (p->next_token.type == TK_SEMICOLON) next_token(p);
 	return res;
 }
 
@@ -120,7 +120,7 @@ priv AST *parse_binding(Parser *p, TokenType type)
 		default:
 			return NULL;
 	}
-	if (!expect_peek(p, ASSIGN)) {
+	if (!expect_peek(p, TK_ASSIGN)) {
 		arena_pop_to(p->arena, previous_offset);
 		return NULL;
 	}
@@ -140,14 +140,14 @@ priv AST *parse_binding(Parser *p, TokenType type)
 		default:
 			return NULL;
 	}
-	if (p->next_token.type == SEMICOLON) next_token(p);
+	if (p->next_token.type == TK_SEMICOLON) next_token(p);
 	return res;
 }
 
 priv AST *parse_expression_stmt(Parser *p)
 {
 	AST	*res = parse_expression(p, LOWEST);
-	if (p->next_token.type == SEMICOLON) next_token(p);
+	if (p->next_token.type == TK_SEMICOLON) next_token(p);
 	return res;
 }
 
@@ -161,7 +161,7 @@ priv AST *parse_expression(Parser *p, Precedence prec)
 		return NULL;
 	}
 	res = pfix_parser(p);
-	while ((p->next_token.type != SEMICOLON) && 
+	while ((p->next_token.type != TK_SEMICOLON) && 
 			prec < PRECEDENCE(p->next_token.type)) {
 		InfixParser ifix_parser = INFIX_PARSERS(p->next_token.type);
 		if (!ifix_parser) return res;
@@ -178,7 +178,7 @@ priv AST *parse_int(Parser *p)
 
 priv AST *parse_bool(Parser *p)
 {
-	return ast_alloc(p->arena, (AST) { AST_BOOL, .AST_BOOL = {p->cur_token.type == TRUE}});
+	return ast_alloc(p->arena, (AST) { AST_BOOL, .AST_BOOL = {p->cur_token.type == TK_TRUE}});
 }
 priv String read_escapes(Parser *p, String raw);
 priv AST *parse_string(Parser *p)
@@ -225,7 +225,7 @@ priv AST *parse_null(Parser *p)
 priv ASTList *parse_many(Parser *p, TokenType end_type);
 priv AST *parse_list(Parser *p)
 {
-	ASTList	*lst = parse_many(p, RBRACKET);
+	ASTList	*lst = parse_many(p, TK_RBRACKET);
 	if (!lst)
 		return NULL;
 	return ast_alloc(p->arena, (AST) { AST_LIST, .AST_LIST = lst });
@@ -239,7 +239,7 @@ priv ASTList *parse_many(Parser *p, TokenType end_type)
 		{ next_token(p); return lst; }
 	next_token(p);
 	astpush(lst, parse_expression(p, LOWEST));
-	while (p->next_token.type == COMMA) {
+	while (p->next_token.type == TK_COMMA) {
 		next_token(p), next_token(p);
 		astpush(lst, parse_expression(p, LOWEST));
 	}
@@ -265,7 +265,7 @@ priv AST *parse_grouped_expression(Parser *p)
 	AST	*res = NULL;
 	next_token(p);
 	res = parse_expression(p, LOWEST);
-	if (!expect_peek(p, RPAREN)) return NULL;
+	if (!expect_peek(p, TK_RPAREN)) return NULL;
 	return res;
 }
 
@@ -274,7 +274,7 @@ priv ASTList *parse_function_params(Parser *p)
 	u64 previous_offset = p->arena->used;
 	ASTList	*params = astlist(p->arena);
 	AST	*tmp = NULL;
-	if (p->next_token.type == RPAREN)
+	if (p->next_token.type == TK_RPAREN)
 		return (next_token(p), params);
 	next_token(p);
 	if (p->cur_token.type == TK_IDENT)
@@ -282,7 +282,7 @@ priv ASTList *parse_function_params(Parser *p)
 	else
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	astpush(params, tmp);
-	while (p->next_token.type == COMMA) {
+	while (p->next_token.type == TK_COMMA) {
 		next_token(p), next_token(p);
 		if (p->cur_token.type == TK_IDENT) {
 			tmp = parse_ident(p);
@@ -291,7 +291,7 @@ priv ASTList *parse_function_params(Parser *p)
 		else
 			return (arena_pop_to(p->arena, previous_offset), NULL);
 	}
-	if (!expect_peek(p, RPAREN))
+	if (!expect_peek(p, TK_RPAREN))
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	return params;
 }
@@ -300,12 +300,12 @@ priv AST *parse_function(Parser *p)
 {
 	u64	previous_offset = p->arena->used;
 	AST	*res = ast_alloc(p->arena, (AST) { AST_FN, .AST_FN ={0}});
-	if (!expect_peek(p, LPAREN))
+	if (!expect_peek(p, TK_LPAREN))
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	ASTList	*params = parse_function_params(p);
 	if (!params) return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_FN.params = params;
-	if (!expect_peek(p, LBRACE))
+	if (!expect_peek(p, TK_LBRACE))
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	ASTList	*body = parse_block_statement(p);
 	if (!body) return (arena_pop_to(p->arena, previous_offset), NULL);
@@ -317,7 +317,7 @@ priv AST *parse_while_statement(Parser *p)
 {
 	u64 previous_offset = p->arena->used;
 	AST *res; 
-	if (!expect_peek(p, LPAREN)) return NULL;
+	if (!expect_peek(p, TK_LPAREN)) return NULL;
 	next_token(p);
 	res = ast_alloc(p->arena, (AST) { AST_WHILE, .AST_WHILE = {0} });
 	AST *condition = parse_expression(p, LOWEST);
@@ -326,8 +326,8 @@ priv AST *parse_while_statement(Parser *p)
 		return NULL;
 	} 
 	res->AST_WHILE.condition = condition;
-	if (!expect_peek(p, RPAREN)) return (arena_pop_to(p->arena, previous_offset), NULL);
-	if (!expect_peek(p, LBRACE)) return (arena_pop_to(p->arena, previous_offset), NULL);
+	if (!expect_peek(p, TK_RPAREN)) return (arena_pop_to(p->arena, previous_offset), NULL);
+	if (!expect_peek(p, TK_LBRACE)) return (arena_pop_to(p->arena, previous_offset), NULL);
 
 	ASTList *body = parse_block_statement(p);
 	if (!body) return (arena_pop_to(p->arena, previous_offset), NULL);
@@ -340,7 +340,7 @@ priv AST *parse_if_expression(Parser *p)
 {
 	u64 previous_offset = p->arena->used;
 	AST	*res;
-	if (!expect_peek(p, LPAREN)) return NULL;
+	if (!expect_peek(p, TK_LPAREN)) return NULL;
 	next_token(p);
 	res = ast_alloc(p->arena, (AST) { AST_COND, .AST_COND = {0} });
 
@@ -349,9 +349,9 @@ priv AST *parse_if_expression(Parser *p)
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_COND.condition = condition;
 
-	if (!expect_peek(p, RPAREN))
+	if (!expect_peek(p, TK_RPAREN))
 		return (arena_pop_to(p->arena, previous_offset), NULL);
-	if (!expect_peek(p, LBRACE))
+	if (!expect_peek(p, TK_LBRACE))
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 
 	ASTList	*consequence = parse_block_statement(p);
@@ -359,9 +359,9 @@ priv AST *parse_if_expression(Parser *p)
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_COND.consequence = consequence;
 
-	if (p->next_token.type == ELSE) {
+	if (p->next_token.type == TK_ELSE) {
 		next_token(p);
-		if (!expect_peek(p, LBRACE))
+		if (!expect_peek(p, TK_LBRACE))
 			return (arena_pop_to(p->arena, previous_offset), NULL);
 		ASTList *alternative = parse_block_statement(p);
 		if (!alternative)
@@ -393,7 +393,7 @@ priv AST *parse_call_expression(Parser *p, AST *function)
 {
 	u64	previous_offset = p->arena->used;
 	AST	*res = ast_alloc(p->arena, (AST) { AST_CALL, .AST_CALL = { function, NULL } });
-	ASTList	*args = parse_many(p, RPAREN);
+	ASTList	*args = parse_many(p, TK_RPAREN);
 	if (!args) 
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_CALL.args = args;
@@ -406,7 +406,7 @@ priv AST *parse_index_expression(Parser *p, AST *lst)
 	AST	*res = ast_alloc(p->arena, (AST) { AST_INDEX, .AST_INDEX = { lst, NULL } });
 	next_token(p);
 	AST *index = parse_expression(p, LOWEST);
-	if (!index || !expect_peek(p, RBRACKET)) 
+	if (!index || !expect_peek(p, TK_RBRACKET)) 
 		return (arena_pop_to(p->arena, previous_offset), NULL);
 	res->AST_INDEX.index = index;
 	return res;
@@ -416,81 +416,58 @@ priv AST *parse_index_expression(Parser *p, AST *lst)
 priv PrefixParser PREFIX_PARSERS(TokenType type)
 {
 	switch (type) {
-		case TK_INT:
-			return &parse_int;
-		case TK_NULL:
-			return &parse_null;
-		case TK_STRING:
-			return &parse_string;
-		case TK_IDENT:
-			return &parse_ident;
-		case LBRACKET:
-			return &parse_list;
-		case TK_FN:
-			return &parse_function;
-		case TRUE:
-		case FALSE:
-			return &parse_bool;
-		case BANG:
-		case MINUS:
-			return &parse_prefix_expression;
-		case LPAREN:
-			return &parse_grouped_expression;
-		case IF:
-			return &parse_if_expression;
-		default:
-			return NULL;
+		case TK_INT: return &parse_int;
+		case TK_NIL: return &parse_null;
+		case TK_STRING: return &parse_string;
+		case TK_IDENT: return &parse_ident;
+		case TK_LBRACKET: return &parse_list;
+		case TK_FN: return &parse_function;
+		case TK_TRUE: case TK_FALSE: return &parse_bool;
+		case TK_BANG: case TK_MINUS: return &parse_prefix_expression;
+		case TK_LPAREN: return &parse_grouped_expression;
+		case TK_IF: return &parse_if_expression;
+		default: return NULL;
 	}
 }
 
 priv InfixParser INFIX_PARSERS(TokenType type)
 {
 	switch (type) {
-		case PLUS:
-		case MINUS:
-		case STAR:
-		case SLASH:
-		case MOD:
-		case EQ:
-		case NOT_EQ:
-		case LT:
-		case GT:
+		case TK_PLUS: case TK_MINUS: case TK_STAR:
+		case TK_SLASH: case TK_MOD: case TK_EQ:
+		case TK_NOT_EQ: case TK_LT: case TK_GT:
 			return &parse_infix_expression;
-		case ASSIGN:
-			return &parse_assignment_expression;
-		case LPAREN:
-			return &parse_call_expression;
-		case LBRACKET:
-			return &parse_index_expression;
-		default:
-			return NULL;
+		case TK_ASSIGN: return &parse_assignment_expression;
+		case TK_LPAREN: return &parse_call_expression;
+		case TK_LBRACKET: return &parse_index_expression;
+		default: return NULL;
 	}
 }
 
 priv Precedence PRECEDENCE(TokenType type)
 {
 	switch (type) {
-		case EQ:
+		case TK_EQ:
 			return EQUALS;
-		case NOT_EQ:
+		case TK_NOT_EQ:
 			return EQUALS;
-		case LT:
+		case TK_LT:
 			return LESSGREATER;
-		case GT:
+		case TK_GT:
 			return LESSGREATER;
-		case PLUS:
+		case TK_PLUS:
 			return SUM;
-		case MINUS:
+		case TK_MINUS:
 			return SUM;
-		case STAR:
-		case SLASH:
-		case MOD:
+		case TK_STAR:
+		case TK_SLASH:
+		case TK_MOD:
 			return PRODUCT;
-		case LPAREN:
+		case TK_LPAREN:
 			return CALL;
-		case LBRACKET:
+		case TK_LBRACKET:
 			return INDEX;
-		case ASSIGN:
+		case TK_ASSIGN:
 			return ASSIGNMENT;
 		default:
 			return LOWEST;
@@ -692,7 +669,7 @@ void ast_aprint(Arena *a, AST *node)
 String	asttype_str(ASTType type)
 {
 	String typenames[] = {
-		str("AST_VAL"), str("AST_VAR"), str("AST_ASSIGN"),
+		str("AST_VAL"), str("AST_VAR"), str("AST_ASSIGN"), str("AST_WHILE"),
 		str("AST_RETURN"), str("AST_IDENT"), str("AST_INT"), 
 		str("AST_BOOL"), str("AST_BOOL"), str("AST_STR"), 
 		str("AST_LIST"), str("AST_FN"), str("AST_PREFIX"), 

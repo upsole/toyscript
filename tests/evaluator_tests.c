@@ -145,13 +145,13 @@ TestResult test_index_eval(Arena *a)
 	struct test tests[] = {
 	    {str("[1, 3, 4][0]"), { INT, .INT = 1}},
 	    {str("[2, false, 5][1]"), { BOOL, .BOOL = false}},
-	    {str("[1, 3, 4][-1]"), { ELE_NULL }},
-	    {str("[1, 3, 4][3]"), { ELE_NULL }},
+	    {str("[1, 3, 4][-1]"), { NIL }},
+	    {str("[1, 3, 4][3]"), { NIL }},
 		{str("[\"string1\", 0, false][0]"), { STR, .STR = str("string1") }},
 		{str("var x = [1, 3, 7]; x[0]"), { INT, .INT = 1 }},
 	    {str("var x = [2, false, 5]; x[1]"), { BOOL, .BOOL = false}},
-	    {str("var x = [1, 3, 4]; x[-1]"), { ELE_NULL }},
-	    {str("var x = [1, 3, 4]; x[3]"), { ELE_NULL }},
+	    {str("var x = [1, 3, 4]; x[-1]"), { NIL }},
+	    {str("var x = [1, 3, 4]; x[3]"), { NIL }},
 		{str("var x = [\"string1\", 0, false]; x[0]"), { STR, .STR = str("string1") }}
 	};
 	for (int i = 0; i < arrlen(tests); i++) {
@@ -209,10 +209,10 @@ TestResult test_cond_eval(Arena *a)
 	};
 	Element expected_10 = {.type = INT, .INT = 10};
 	Element expected_20 = {.type = INT, .INT = 20};
-	Element null = {.type = ELE_NULL};
+	Element null = {.type = NIL};
 	struct elem_input tests[] = {
 	    {str("if (true) { 10 }"), expected_10, INT},
-	    {str("if (false) { 10 }"), null, ELE_NULL},
+	    {str("if (false) { 10 }"), null, NIL},
 	    {str("if (2 > 3) { 10 } else { 20 }"), expected_20, INT},
 	};
 	for (int i = 0; i < arrlen(tests); i++) {
@@ -239,7 +239,7 @@ TestResult test_return_eval(Arena *a)
 	struct elem_input tests[] = {
 					{str("return 10;"), expected10, INT},
 				    {str("return false;"), {.type = BOOL, .BOOL = false}, BOOL},
-				    {str("return ;"), { ELE_NULL }, ELE_NULL},
+				    {str("return ;"), { NIL }, NIL},
 				    {cstr(nested_return), {.type = INT, .INT = 1}, INT} 
 	};
 	for (int i = 0; i < arrlen(tests); i++) {
@@ -441,7 +441,7 @@ priv bool elem_eq(Element e1, Element e2)
 {
 	if (e1.type != e2.type) return false;
 	switch (e1.type) {
-		case ELE_NULL: return true;
+		case NIL: return true;
 		case INT: return e1.INT == e2.INT;
 		case BOOL: return e1.BOOL == e2.BOOL;
 		case ERR: case STR: return str_eq(e1.STR, e2.STR);
@@ -497,14 +497,14 @@ TestResult test_while_loop(Arena *a)
 	} tests[] = {
 		{ str("var i = 0; while (i < 10) { i = i + 1; } i;"), (Element) { INT, .INT = 10 }},
 		{ str("var i = 0; var j = 5; while (i < 10) { var j = i; i = i + 1; j = j + 2; } j;"), (Element) { INT, .INT = 5 }},
-		{ str("var i = 0; while (i < 10 { i = i + 1; }"), (Element) { ELE_NULL }}, // Parser error expected
+		{ str("var i = 0; while (i < 10 { i = i + 1; }"), (Element) { NIL }}, // Parser error expected
 	};
 
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
-		if (res.type == ELE_NULL && tests[i].expected.type == ELE_NULL)
+		if (res.type == NIL && tests[i].expected.type == NIL)
 			return pass();
-		if (res.type == ELE_NULL && !tests[i].expected.type == ELE_NULL)
+		if (res.type == NIL && !tests[i].expected.type == NIL)
 			return fail(str(""));
 		if (res.TYPE == INT) {
 			if(TEST(res.INT != tests[i].expected.INT))
@@ -523,7 +523,7 @@ Element eval_wrapper(Arena *a, String input)
 	AST *prog = parse_program(p);
 	if (p->errors) {
 		parser_print_errors(p);
-		return (Element) { ELE_NULL };
+		return (Element) { NIL };
 	}
 	return eval(a, ns, prog);
 }

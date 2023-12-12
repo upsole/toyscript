@@ -32,28 +32,29 @@ TestResult all_tokens_test(Arena *arena)
 {
 
 	Token expected[] = {
-		{SEMICOLON, str(";")}, {COMMA, str(",")},
-		{BANG, str("!")}, {STAR, str("*")},
-		{GT, str(">")}, {LT, str("<")},
-		{LPAREN, str("(")}, {RPAREN, str(")")},
-		{LBRACE, str("{")}, {RBRACE, str("}")},
-		{LBRACKET, str("[")}, {RBRACKET, str("]")},
-		{PLUS, str("+")},	{MINUS, str("-")},
-		{ASSIGN, str("=")}, {EQ, str("==")},
-		{NOT_EQ, str("!=")}, {TK_INT, str("20")},
+		{TK_NIL, str("NIL")}, {TK_WHILE, str("while")},
+		{TK_SEMICOLON, str(";")}, {TK_COMMA, str(",")},
+		{TK_BANG, str("!")}, {TK_STAR, str("*")},
+		{TK_GT, str(">")}, {TK_LT, str("<")},
+		{TK_LPAREN, str("(")}, {TK_RPAREN, str(")")},
+		{TK_LBRACE, str("{")}, {TK_RBRACE, str("}")},
+		{TK_LBRACKET, str("[")}, {TK_RBRACKET, str("]")},
+		{TK_PLUS, str("+")},	{TK_MINUS, str("-")},
+		{TK_ASSIGN, str("=")}, {TK_EQ, str("==")},
+		{TK_NOT_EQ, str("!=")}, {TK_INT, str("20")},
 	    {TK_IDENT, str("name")},	{TK_FN, str("fn")},
 	    {TK_VAL, str("val")},	{TK_VAR, str("var")},
-	    {TK_RETURN, str("return")}, {IF, str("if")},
-	    {ELSE, str("else")},	{TRUE, str("true")},
-	    {FALSE, str("false")},	{TK_STRING, str("This is a string")}
+	    {TK_RETURN, str("return")}, {TK_IF, str("if")},
+	    {TK_ELSE, str("else")},	{TK_TRUE, str("true")},
+	    {TK_FALSE, str("false")}, {TK_STRING, str("This is a string")}
 	};
 
 	Lexer *l = lexer(
-	    arena, str(";,!*><(){}[]+-= == != 20 name fn val var return if else "
+	    arena, str("NIL while;,!*><(){}[]+-= == != 20 name fn val var return if else "
 		       "true false \"This is a string\""));
 	Token t = lexer_token(l);
 	int i = 0;
-	while (t.type != END) {
+	while (t.type != TK_END) {
 		if (TEST(i >= arrlen(expected)))
 			return fail(str("End reached before expected"));
 		if (TEST(expected[i].type != t.type)) {
@@ -83,14 +84,14 @@ TestResult skip_comments_test(Arena *arena)
 
 	Token expected[] = {
 		{TK_VAL, str("val")}, {TK_IDENT, str("x")},
-		{ASSIGN, str("=")}, {TK_INT, str("5")},
-		{SEMICOLON, str(";")}, {TK_IDENT, str("print")},
-		{LPAREN, str("(")}, {TK_IDENT, str("x")},
-		{RPAREN, str(")")}, {SEMICOLON, str(";")}
+		{TK_ASSIGN, str("=")}, {TK_INT, str("5")},
+		{TK_SEMICOLON, str(";")}, {TK_IDENT, str("print")},
+		{TK_LPAREN, str("(")}, {TK_IDENT, str("x")},
+		{TK_RPAREN, str(")")}, {TK_SEMICOLON, str(";")}
 	};
 	Token t = lexer_token(l);
 	int i = 0;
-	while (t.type != END) {
+	while (t.type != TK_END) {
 		if (TEST(i >= arrlen(expected))) 
 			return fail(str("End reached before expected"));
 		if (TEST(expected[i].type != t.type)) {
