@@ -51,7 +51,8 @@ priv int repl()
 
 	str_print(str("-TOYSCRIPT REPL-\n"));
 
-	while (1) {
+	while (1)
+	{
 		str_print(str("~ "));
 		input = read_stdin(stdin_arena);
 		if (str_eq(input, str("exit"))) break;
@@ -61,8 +62,15 @@ priv int repl()
 		Element result = eval(program_arena, ns, program);
 		if (p->errors) 
 			parser_print_errors(p);
-		else
-			str_print(to_string(stdin_arena, result)), str_print(str("\n"));
+		else {
+			if (result.type == STR) {
+				str_print(str_fmt(stdin_arena, "\"%.*s\"",
+							fmt(to_string(stdin_arena, result)))); 
+			} else {
+				str_print(to_string(stdin_arena, result)); 
+			}
+			str_print(str("\n"));
+		}
 		arena_reset(stdin_arena);
 	}
 	return 0;

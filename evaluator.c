@@ -776,7 +776,7 @@ String	to_string(Arena *a, Element e)
 		case BOOL:
 			return (e.BOOL) ? str("true") : str("false");
 		case STR:
-			return str_fmt(a, "\"%.*s\"", fmt(e.STR));
+			return str_fmt(a, "%.*s", fmt(e.STR));
 		case RETURN:
 			return to_string(a, (*e.RETURN.value));
 		case ARRAY:
