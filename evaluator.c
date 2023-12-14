@@ -118,10 +118,13 @@ Element	eval(Arena *a, Namespace *ns, AST *node)
 			Element fn = eval(a, ns, node->AST_CALL.function);
 			if (fn.type == ERR) return fn;
 			Namespace *func_namespace = (fn.type == FUNCTION) ? fn.FUNCTION.namespace : ns;
-			ElemArray *args = elemarray_from_ast(a, ns, node->AST_CALL.args);
+			Arena *arg_arena = arena(MB(1));
+			ElemArray *args = elemarray_from_ast(arg_arena, ns, node->AST_CALL.args);
 			if (args->len == 1 && args->items[0].type == ERR)
 				return args->items[0];
-			return eval_call(a, func_namespace, fn, args);
+			Element result = eval_call(a, func_namespace, fn, args);
+			arena_free(&arg_arena);
+			return result;
 		}
 		case AST_WHILE: {
 			Element condition = eval(a, ns, node->AST_WHILE.condition);
@@ -801,18 +804,18 @@ priv String array_to_string(Arena *a, ElemArray *arr)
 	for (int i = 0; i < arr->len; i++) {
 		String tmp = to_string(a, arr->items[i]);
 		arena_alloc(a, tmp.len);
-		memcpy(buf + len, tmp.buf, tmp.len);
+		memmove(buf + len, tmp.buf, tmp.len);
 		len += tmp.len;
 		if (i < (arr->len - 1)) {
 			tmp = str(", ");
 			arena_alloc(a, tmp.len);
-			memcpy(buf + len, tmp.buf, tmp.len);
+			memmove(buf + len, tmp.buf, tmp.len);
 			len += tmp.len;
 		}
 	}
 	String tmp = str("]");
 	arena_alloc(a, tmp.len);
-	memcpy(buf + len, tmp.buf, tmp.len);
+	memmove(buf + len, tmp.buf, tmp.len);
 	len += tmp.len;
 	return (String){ buf, len };
 }
@@ -826,18 +829,18 @@ priv String list_to_string(Arena *a, ElemList *lst)
 	for (ElemNode *cursor = lst->head; cursor; cursor = cursor->next) {
 		String tmp = to_string(a, cursor->element);
 		arena_alloc(a, tmp.len);
-		memcpy(buf + len, tmp.buf, tmp.len);
+		memmove(buf + len, tmp.buf, tmp.len);
 		len += tmp.len;
 		if (cursor->next) {
 			tmp = str(", ");
 			arena_alloc(a, tmp.len);
-			memcpy(buf + len, tmp.buf, tmp.len);
+			memmove(buf + len, tmp.buf, tmp.len);
 			len += tmp.len;
 		}
 	}
 	String tmp = str("]");
 	arena_alloc(a, tmp.len);
-	memcpy(buf + len, tmp.buf, tmp.len);
+	memmove(buf + len, tmp.buf, tmp.len);
 	len += tmp.len;
 	return (String){ buf, len };
 }
@@ -1037,7 +1040,7 @@ priv Bind *ns_get(Namespace *ns, String key)
 	return res;
 }
 
-priv int ns_update(Namespace *ns, String key, Element elem)
+priv int ns_update(Namespace *ns, String key, Element elem) // XXX Build a more granular allocator for namespaces (it currently "leaks")
 {
 	// Updates first hit of binding in the namespace it's found - Assumes it's been confirmed to exist as MUTABLE before
 	Bind *target = ns_get_inner(ns, key);

@@ -45,8 +45,8 @@ priv int repl()
 	AST		*program;
 
 	Arena	*stdin_arena = arena(MB(4));
-	Arena	*program_arena = arena(MB(4));
-	Arena	*namespace_arena = arena(MB(4));
+	Arena	*program_arena = arena(GB(4));
+	Arena	*namespace_arena = arena(GB(4));
 	Namespace *ns = ns_create(namespace_arena, 16);
 
 	str_print(str("-TOYSCRIPT REPL-\n"));

@@ -1,4 +1,0 @@
-val l_uno = [0,1,2,3,4];
-val l_dos = [5,6,7,8,9];
-val l_fin = cons(l_uno, l_dos);
-print(l_fin);

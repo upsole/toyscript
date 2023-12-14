@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ### 
 cflags="-Wall -Werror -Wimplicit-fallthrough -Wno-unused-value -Wunused-function"
-dev="-g3"
+dev="-g3 -fsanitize=address"
 src="base.c lexer.c ast.c evaluator.c"
 exit_on_fail=""
 args="$cflags $src"

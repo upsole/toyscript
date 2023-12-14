@@ -1,3 +1,4 @@
+val sqr = fn(x) { x * x; }
 val lowest_div = fn(x) { # assumes x is odd
 	val recur = fn(x, div) {
 		if (sqr(div) > x) {
@@ -8,7 +9,7 @@ val lowest_div = fn(x) { # assumes x is odd
 		}
 		return recur(x, div + 2);
 	};
-	return recur(x, 2);
+	return recur(x, 3);
 };
 val is_prime = fn(x) {
 	if (x < 2) {
@@ -22,15 +23,12 @@ val is_prime = fn(x) {
 	return false;
 };
 
-val main = fn(x) {
-	val recur = fn(begin, end) {
-		if (begin == end) {
-			return 0;
-		}
-		print(begin, " ", is_prime(begin));
-		return recur(begin + 1, end);
+val main = fn(n) {
+	var x = 0;
+	while (x < n) {
+		print(x, " ", is_prime(x));
+		x = x + 1;
 	}
-	return recur(0, x);
 }
 
-main(5040);
+main(501);
