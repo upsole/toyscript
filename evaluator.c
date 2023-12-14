@@ -192,16 +192,16 @@ priv Element eval_identifier(Arena *a, Namespace *ns, String name)
 	if (res) return res->element;
 	Element builtin = BUILTINS(name);
 	if (builtin.type == BUILTIN) return builtin;
-	return error(str_fmt(a, "Name not found: %*.s", fmt(name)));
+	return error(str_fmt(a, "Name not found: %.*s", fmt(name)));
 }
 
 priv Element eval_mutable_identifier(Arena *a, Namespace *ns, String name)
 {
 	Bind *res = ns_get(ns, name);
 	if (!res)
-		return error(str_fmt(a, "Name not found: %*.s", fmt(name)));
+		return error(str_fmt(a, "Name not found: %.*s", fmt(name)));
 	if (!res->mutable)
-		return error(str_fmt(a, "%*.s binding is not mutable", fmt(name)));
+		return error(str_fmt(a, "%.*s binding is not mutable", fmt(name)));
 	return (res->element);
 }
 
@@ -237,7 +237,7 @@ priv Element eval_index_expression(Arena *a, Namespace *ns, Element left, Elemen
 	if (left.type == LIST && index.type == INT)
 		return eval_list_index(a, left, index);
 
-	return error(str_fmt(a, "No index operation implemented for: %*.s",
+	return error(str_fmt(a, "No index operation implemented for: %.*s",
 				fmt(type_str(left.type))));
 }
 
@@ -299,7 +299,7 @@ priv Element eval_call(Arena *a, Namespace *ns, Element fn, ElemArray *args)
 		return eval_function_call(a, ns, fn.FUNCTION, args);
 	if (fn.type == BUILTIN)
 		return fn.BUILTIN(a, ns, args);
-	return error(str_fmt(a, "Not a callable element: %*.s", to_string(a, fn)));
+	return error(str_fmt(a, "Not a callable element: %.*s", to_string(a, fn)));
 }
 
 priv Element eval_function_call(Arena *a, Namespace *ns, struct FUNCTION fn, ElemArray *args)
@@ -338,13 +338,13 @@ priv Element eval_prefix_expression(Arena *a, String operator, Element right)
 		return eval_bang(a, right);
 	if (str_eq(operator, str("-")))
 		return eval_minus(a, right);
-	return error(str_fmt(a, "Invalid operation: %*.s", operator));
+	return error(str_fmt(a, "Invalid operation: %.*s", operator));
 }
 
 priv Element eval_minus(Arena *a, Element right)
 {
 	if (right.type != INT) 
-		return error(str_fmt(a, "Invalid operation: -%*.s",
+		return error(str_fmt(a, "Invalid operation: -%.*s",
 					fmt(type_str(right.type))));
 
 	return (Element) { INT, .INT = -right.INT };
@@ -360,7 +360,7 @@ priv Element eval_bang(Arena *a, Element right)
 		case NIL:
 			return (Element) { BOOL, .BOOL = false };
 		default:
-			return error(str_fmt(a, "Invalid operation: !%*.s",
+			return error(str_fmt(a, "Invalid operation: !%.*s",
 						type_str(right.type)));
 	}
 }
@@ -376,7 +376,7 @@ priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node)
 		if (right.type == ERR)
 			return left;
 		if (right.type != left.type)
-			return error(str_fmt(a, "Can't assign type %*.s of type %*.s to variable of type %*.s",
+			return error(str_fmt(a, "Can't assign type %.*s of type %.*s to variable of type %.*s",
 						fmt(type_str(right.type)), fmt(node.left->AST_STR), fmt(type_str(left.type))));
 		ns_update(ns, node.left->AST_STR, right);
 		return right;		
@@ -385,7 +385,7 @@ priv Element eval_assignement(Arena *a, Namespace *ns, struct AST_ASSIGN node)
 	if (node.left->type == AST_INDEX) {
 		return eval_assignement_to_index(a, ns, node.left->AST_INDEX, node.right);
 	}
-	return error(str_fmt(a, "Can't assign to type %*.s", type_str(node.left->type)));
+	return error(str_fmt(a, "Can't assign to type %.*s", type_str(node.left->type)));
 }
 
 priv Element eval_assignement_to_index(Arena *a, Namespace *ns, struct AST_INDEX index, AST *new_val_ast)
@@ -428,7 +428,7 @@ priv Element eval_infix_str(Arena *a, String left, String op, String right);
 priv Element eval_infix_expression(Arena *a, Element left, String op, Element right)
 {
 	if (left.type != right.type) 
-		return error(str_fmt(a, "Invalid types in operation %*.s%*.s%*.s",
+		return error(str_fmt(a, "Invalid types in operation: %.*s %.*s %.*s",
 					fmt(type_str(left.type)), fmt(op), fmt(type_str(right.type))));
 	if (left.type == INT && right.type == INT)
 		return eval_infix_int(a, left.INT, op, right.INT);
@@ -450,7 +450,7 @@ priv Element eval_infix_expression(Arena *a, Element left, String op, Element ri
 		lst->items[0] = left; lst->items[1] = right;
 		return builtin_concat(a, NULL, lst); // XXX
 	}
-	return error(str_fmt(a, "Invalid operation %*.s %*.s %*.s",
+	return error(str_fmt(a, "Invalid operation: %.*s %.*s %.*s",
 				fmt(type_str(left.type)), fmt(op), fmt(type_str(right.type))));
 }
 
@@ -474,7 +474,7 @@ priv Element eval_infix_int(Arena *a, i64 left, String op, i64 right)
 		return (Element) { BOOL, .BOOL = (left > right) };
 	if (str_eq(op, str("<")))
 		return (Element) { BOOL, .BOOL = (left < right) };
-	return error(str_fmt(a, "Invalid operation: %*.s%*.s%*.s",
+	return error(str_fmt(a, "Invalid operation: %.*s%.*s%.*s",
 				fmt(type_str(INT)), fmt(op), fmt(type_str(INT))));
 }
 
@@ -489,8 +489,8 @@ priv Element eval_infix_str(Arena *a, String left, String op, String right)
 	if (str_eq(op, str("!=")))
 		return (Element) { BOOL, .BOOL = (!str_eq(left, right)) };
 
-	return error(str_fmt(a, "Invalid operation: %*.s%*.s",
-				fmt(type_str(STR)), fmt(op), type_str(STR))); 
+	return error(str_fmt(a, "Invalid operation: %.*s %.*s %.*s",
+				fmt(type_str(STR)), fmt(op), fmt(type_str(STR)))); 
 }
 
 priv Element error(String msg)
@@ -547,7 +547,7 @@ priv Element builtin_concat(Arena *a, Namespace *ns, ElemArray *args)
 			return elemlist_concat(a, arg0.LIST, arg1.LIST);
 	}
 	// IF STR
-	return error(str_fmt(a, "Wrong types for concat got %*.s and %*.s",
+	return error(str_fmt(a, "Wrong types for concat got %.*s and %.*s",
 				fmt(type_str(arg0.type)), fmt(type_str(arg1.type))));
 }
 
@@ -587,7 +587,7 @@ priv Element builtin_slurp(Arena *a, Namespace *ns, ElemArray *args)
 	if (arg0.type == ERR)
 		return arg0;
 	if (arg0.type != STR)
-		return error(str_fmt(a, "Called slurp with the wrong type (%*.s), expected STR",
+		return error(str_fmt(a, "Called slurp with the wrong type (%.*s), expected STR",
 					fmt(type_str(arg0.type))));
 	Element file = read_file_to_elem(a, str_dupc(a, arg0.STR));
 	return file;
@@ -671,7 +671,7 @@ priv Element builtin_car(Arena *a, Namespace *ns, ElemArray *args)
 	}
 	if (arg0.type == NIL)  
 		return arg0;
-	return error(str_fmt(a, "Wrong type for car got %*.s",
+	return error(str_fmt(a, "Wrong type for car got %.*s",
 				fmt(type_str(arg0.type))));
 }
 
@@ -697,7 +697,7 @@ priv Element builtin_push(Arena *a, Namespace *ns, ElemArray *args)
 		res->items[a0_len] = arg1;
 		return (Element) { ARRAY, .ARRAY = res };
 	}
-	return error(str_fmt(a, "Wrong type for push got %*.s and %*.s",
+	return error(str_fmt(a, "Wrong type for push got %.*s and %.*s",
 				fmt(type_str(arg0.type)), fmt(type_str(arg1.type))));
 }
 
@@ -729,7 +729,7 @@ priv Element builtin_len(Arena *a, Namespace *ns, ElemArray *args)
 		return (Element) { INT, .INT = arg0.ARRAY->len };
 	if (arg0.type == LIST)
 		return (Element) { INT, .INT = arg0.LIST->len };
-	return error(str_fmt(a, "Type error: len called with argument of type: %*.s", fmt(type_str(arg0.type))));
+	return error(str_fmt(a, "Type error: len called with argument of type: %.*s", fmt(type_str(arg0.type))));
 }
 
 // HELPER

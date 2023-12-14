@@ -156,7 +156,7 @@ priv AST *parse_expression(Parser *p, Precedence prec)
 	AST	*res = NULL;
 	PrefixParser pfix_parser = PREFIX_PARSERS(p->cur_token.type);
 	if (!pfix_parser) {
-		parser_error(p, str_fmt(p->arena, "Parsing error - not a valid prefix: %*.s", 
+		parser_error(p, str_fmt(p->arena, "Parsing error - not a valid prefix: %.*s", 
 					fmt(token_str(p->cur_token.type))));
 		return NULL;
 	}
@@ -538,7 +538,7 @@ priv bool expect_peek(Parser *p, TokenType type)
 		return true;
 	} else {
 		parser_error(p, str_fmt(p->arena, 
-					"Parsing error - Wrong token after %*.s. Got %*.s, expected %*.s",
+					"Parsing error - Wrong token after %.*s. Got %.*s, expected %.*s",
 					fmt(token_str(p->cur_token.type)), fmt(token_str(p->next_token.type)),
 					fmt(token_str(type))));
 		return false;
@@ -573,38 +573,38 @@ String ast_str(Arena *a, AST *node)
 		case AST_NULL:
 			return str("NULL");
 		case AST_VAL:
-			return str_fmt(a, "|%*.s=%*.s|", fmt(node->AST_VAL.name), fmt(ast_str(a, node->AST_VAL.value)));
+			return str_fmt(a, "|%.*s=%.*s|", fmt(node->AST_VAL.name), fmt(ast_str(a, node->AST_VAL.value)));
 		case AST_VAR:
-			return str_fmt(a, "|%*.s=%*.s|", fmt(node->AST_VAR.name), fmt(ast_str(a, node->AST_VAR.value)));
+			return str_fmt(a, "|%.*s=%.*s|", fmt(node->AST_VAR.name), fmt(ast_str(a, node->AST_VAR.value)));
 		case AST_RETURN:
-			return str_fmt(a, "|return %*.s|", ast_str(a, node->AST_RETURN.value));
+			return str_fmt(a, "|return %.*s|", ast_str(a, node->AST_RETURN.value));
 		case AST_ASSIGN:
-			return str_fmt(a, "|%*.s = %*.s|", fmt(ast_str(a, node->AST_ASSIGN.left)), fmt(ast_str(a, node->AST_ASSIGN.right)));
+			return str_fmt(a, "|%.*s = %.*s|", fmt(ast_str(a, node->AST_ASSIGN.left)), fmt(ast_str(a, node->AST_ASSIGN.right)));
 		case AST_PROGRAM:
 		case AST_LIST:
 			return astlist_str(a, node->AST_LIST);
 		case AST_FN:
 			return str_concat(a, astlist_str(a, node->AST_FN.params), astlist_str(a, node->AST_FN.body));
 		case AST_PREFIX:
-			return str_fmt(a, "(%*.s%*.s)", fmt(node->AST_PREFIX.op), fmt(ast_str(a, node->AST_PREFIX.right)));
+			return str_fmt(a, "(%.*s%.*s)", fmt(node->AST_PREFIX.op), fmt(ast_str(a, node->AST_PREFIX.right)));
 		case AST_INFIX:
-			return str_fmt(a, "(%*.s%*.s%*.s)", fmt(ast_str(a, node->AST_INFIX.left)), 
+			return str_fmt(a, "(%.*s%.*s%.*s)", fmt(ast_str(a, node->AST_INFIX.left)), 
 					fmt(node->AST_INFIX.op), fmt(ast_str(a, node->AST_INFIX.right)));
 		case AST_COND: {
 			String alternative = (node->AST_COND.alternative) ? astlist_str(a, node->AST_COND.alternative) : str("");
-			return str_fmt(a, "|if%*.s{%*.s}%*.s|",
+			return str_fmt(a, "|if%.*s{%.*s}%.*s|",
 					fmt(ast_str(a,node->AST_COND.condition)),
 					fmt(astlist_str(a, node->AST_COND.consequence)),
 					fmt(alternative));
 			}
 		case AST_WHILE:
-			return str_fmt(a, "|while %*.s{%*.s}|", fmt(ast_str(a, node->AST_WHILE.condition)),
+			return str_fmt(a, "|while %.*s{%.*s}|", fmt(ast_str(a, node->AST_WHILE.condition)),
 					fmt(astlist_str(a, node->AST_WHILE.body)));
 		case AST_CALL:
-			return str_fmt(a, "(%*.s<%*.s>)", fmt(ast_str(a, node->AST_CALL.function)),
+			return str_fmt(a, "(%.*s<%.*s>)", fmt(ast_str(a, node->AST_CALL.function)),
 					fmt(astlist_str(a, node->AST_CALL.args)));
 		case AST_INDEX:
-			return str_fmt(a, "(%*.s[%*.s])", fmt(ast_str(a, node->AST_INDEX.left)), fmt(ast_str(a, node->AST_INDEX.index)));
+			return str_fmt(a, "(%.*s[%.*s])", fmt(ast_str(a, node->AST_INDEX.left)), fmt(ast_str(a, node->AST_INDEX.index)));
 	}
 	return (NEVER(1), str(""));
 }

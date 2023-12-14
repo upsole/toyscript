@@ -57,9 +57,7 @@ typedef struct StrList {
 
 #define str(lit) ((String) { lit, (sizeof(lit) - 1) })
 #define cstr(s) ((String) { s, ((u32)(strlen(s))) })
-#define fmt(s) (int)(s).len, (s).buf
-/* #define _NUMARGS(...) (sizeof((String[]){__VA_ARGS__}) / sizeof(String)) */
-/* #define CONCAT(a, ...) (str_concat_n(a, _NUMARGS(__VA_ARGS__), __VA_ARGS__)) */
+#define fmt(s) (u32)(s).len, (s).buf
 
 Arena	*arena(u64 cap);
 void 	arena_reset(Arena *a);
@@ -76,7 +74,6 @@ bool 	str_eq(String a, String b);
 String	str_fmt(Arena *a, char *fmt, ...);
 char 	*str_chr(String s, char c);
 String 	str_concat(Arena *a, String s1, String s2);
-String 	str_concat_n(Arena *a, int count, ...);
 char	*str_dupc(Arena *a, String s);
 i64 	str_atol(String s);
 

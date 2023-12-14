@@ -77,7 +77,7 @@ TestResult test_integer_eval(Arena *a)
 	for (int i = 0; i < arrlen(tests); i++) {
 		Element res = eval_wrapper(a, tests[i].input);
 		if (TEST(res.INT != tests[i].expected))
-			return fail(CONCAT(a, str_fmt(a, "Value mismatch got %ld expected %ld", res.INT, tests[i].expected)));
+			return fail(str_fmt(a, "Value mismatch: got %ld expected %ld", res.INT, tests[i].expected));
 	}
 	return pass();
 }
@@ -266,11 +266,11 @@ TestResult test_errors(Arena *a)
 		String expected_msg;
 	};
 	struct error_test tests[] = {
-	    {str("5 + false;"), str("Invalid types in operation: INT+BOOL")},
+	    {str("5 + false;"), str("Invalid types in operation: INT + BOOL")},
 	    {str("-true;"), str("Invalid operation: -BOOL")},
-	    {str("true < false;"), str("Invalid operation: BOOL<BOOL")},
-	    {str("\"String 1\" - \"String \""), str("Invalid operation: STR-STR")},
-	    {str("if (1 < 10) { if (1 < 10) { false - 5; } 5; }"), str("Invalid types in operation: BOOL-INT")},
+	    {str("true < false;"), str("Invalid operation: BOOL < BOOL")},
+	    {str("\"String 1\" - \"String \""), str("Invalid operation: STR - STR")},
+	    {str("if (1 < 10) { if (1 < 10) { false - 5; } 5; }"), str("Invalid types in operation: BOOL - INT")},
 	    {str("len(\"asdf\", \"asdf\")"), str("Wrong number of args for len: got 2, expected 1")},
 	    {str("len(5)"), str("Type error: len called with argument of type: INT")}
 	};

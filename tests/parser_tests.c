@@ -75,14 +75,11 @@ TestResult identifier_tests(Arena *a)
 		if (TEST(!cursor))
 			return fail(str("Less statements than expected"));
 		if (TEST(cursor->ast->type != AST_IDENT))
-			return fail(CONCAT(a, 
-				str("Expected: "), asttype_str(AST_IDENT),
-						str("Type mismatch")));
+			return fail(str_fmt(a, "Expected: %*.s Type mismatch",
+						fmt(asttype_str(AST_IDENT))));
 		if (TEST(!str_eq(cursor->ast->AST_STR, expected[i]))) {
-			return fail(CONCAT(a, str("Expected: "),
-					       expected[i], str("\nActual: "),
-						   cursor->ast->AST_STR,
-					       str("\nMismatch in literal")));
+			return fail(str_fmt(a, "Expected: %*.s \nActual: %*.s\nMismatch in literal",
+						fmt(expected[i]), fmt(cursor->ast->AST_STR)));
 		}
 		cursor = cursor->next;
 		i++;
@@ -129,9 +126,8 @@ TestResult string_literal_tests(Arena *a)
 			return fail(str("Less statements than expected"));
 
 		if (TEST(!str_eq(cursor->ast->AST_STR, expected_value[i])))
-			return fail(CONCAT(a, str("Expected: "), expected_value[i],
-						str("\nActual: "), cursor->ast->AST_STR,
-						str("\nMismatch in value")));
+			return fail(str_fmt(a, "Expected: %*.s\nActual: %*s\nMismatch in value",
+						fmt(expected_value[i]), fmt(cursor->ast->AST_STR)));
 		cursor = cursor->next;
 		i++;
 	}
@@ -245,9 +241,8 @@ TestResult list_literal_tests(Arena *a)
 	AST *ex = prog->AST_LIST->head->ast;
 
 	if (TEST(ex->type != AST_LIST))
-		return fail(CONCAT(a,
-			       str("Expression is not of type AST_LIST got: "),
-			       asttype_str(ex->type)));
+		return fail(str_fmt(a, "Expression is not of type AST_LIST got: %*.s",
+					asttype_str(ex->type)));
 	if (TEST(ex->AST_LIST->len != 3))
 		return fail(str_fmt(a, "Wrong list len, expected %lu got %lu", 3,
 				   ex->AST_LIST->len));
@@ -264,7 +259,7 @@ TestResult index_expression_tests(Arena *a)
 	AST *ex = prog->AST_LIST->head->ast;
 
 	if (TEST(ex->type != AST_INDEX))
-		return fail(CONCAT(a, str("Expression is not of type AST_INDEX: "),
+		return fail(str_fmt(a, "Expression is not of type AST_INDEX, got: %*s",
 					asttype_str(ex->type)));
 	return pass();
 }
@@ -292,9 +287,8 @@ TestResult test_infix(Arena *a, InfixTestInput params)
 			a, "Expected: %ld\nActual: %ld\nLeft value mismatch",
 			params.left_val, get_rvalue(actual->AST_INFIX.left)));
 	if (!str_eq(params.op, actual->AST_INFIX.op))
-		return fail(CONCAT(a, str("Actual: "),
-					actual->AST_INFIX.op,
-					str("\nExpected: "), params.op));
+		return fail(str_fmt(a, "Actual: %*.s\nExpected: %*.s",
+					actual->AST_INFIX.op, params.op));
 	if (get_rvalue(actual->AST_INFIX.right) != params.right_val)
 		return fail(str_fmt(
 			a, "Expected: %ld\nActual: %ld\nRight value mismatch",
@@ -356,9 +350,8 @@ TestResult test_operator_precedence(Arena *a, struct OperatorPrecInput params)
 	AST *ex = prog->AST_LIST->head->ast;
 	String ex_string = ast_str(a, ex);
 	if (TEST(!str_eq(ex_string, params.expected))) {
-		return fail(CONCAT(a, str("Expected: "), params.expected,
-				str("\nActual: "), ex_string,
-				str("\nExpression strings do not match")));
+		return fail(str_fmt(a, "Expected: %*.s\nActual: %*.s\nExpression strings do not match",
+					fmt(params.expected), fmt(ex_string)));
 	}
 	return pass();
 }

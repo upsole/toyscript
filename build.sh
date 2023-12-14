@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 ### 
-cflags="-Wall -Werror -Wimplicit-fallthrough -Wno-unused-value"
+cflags="-Wall -Werror -Wimplicit-fallthrough -Wno-unused-value -Wunused-function"
 dev="-g3"
 src="base.c lexer.c ast.c evaluator.c"
 exit_on_fail=""
-args="$cflags $dev $src"
+args="$cflags $src"
 cc=gcc
 ### 
 

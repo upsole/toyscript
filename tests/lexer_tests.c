@@ -58,18 +58,14 @@ TestResult all_tokens_test(Arena *arena)
 		if (TEST(i >= arrlen(expected)))
 			return fail(str("End reached before expected"));
 		if (TEST(expected[i].type != t.type)) {
-			return fail(CONCAT(arena, 
-						str("Expected: "), token_str(t.type),
-						str("\nActual: "), token_str(t.type),
-						str("\nToken type missmatch")
-						));
+			return fail(str_fmt(arena,
+						"Expected %*.s\nActual: %*.s\nToken type mismacht",
+						fmt(token_str(expected[i].type)), fmt(token_str(t.type))));
 		}
 		if (TEST(!str_eq(expected[i].lit, t.lit))) {
-			return fail(CONCAT(arena,
-						str("Expected: "), expected[i].lit,
-						str("\nActual: "), t.lit,
-						str("\nToken literal missmatch")
-						));
+			return fail(str_fmt(arena,
+						"Expected %*.s\nActual: %*.s\nToken literal mismacht",
+						fmt(expected[i].lit), fmt(t.lit)));
 		}
 		t = lexer_token(l);
 		i++;
@@ -95,18 +91,14 @@ TestResult skip_comments_test(Arena *arena)
 		if (TEST(i >= arrlen(expected))) 
 			return fail(str("End reached before expected"));
 		if (TEST(expected[i].type != t.type)) {
-			return fail(CONCAT(arena, 
-						str("Expected: "), token_str(t.type),
-						str("\nActual: "), token_str(t.type),
-						str("\nToken type missmatch")
-						));
+			return fail(str_fmt(arena,
+						"Expected %*.s\nActual: %*.s\nToken type mismacht",
+						fmt(token_str(expected[i].type)), fmt(token_str(t.type))));
 		}
 		if (TEST(!str_eq(expected[i].lit, t.lit))) {
-			return fail(CONCAT(arena,
-						str("Expected: "), expected[i].lit,
-						str("\nActual: "), t.lit,
-						str("\nToken literal missmatch")
-						));
+			return fail(str_fmt(arena,
+						"Expected %*.s\nActual: %*.s\nToken literal mismacht",
+						fmt(expected[i].lit), fmt(t.lit)));
 		}
 		t = lexer_token(l);
 		i++;

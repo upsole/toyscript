@@ -29,6 +29,7 @@ Arena	*arena(u64 cap)
 	commit_memory(block, init_commit);
 
 	Arena *a = block;
+	a->buf = a;
 	a->used += sizeof(Arena);
 	a->commited = init_commit;
 	a->cap = cap;
@@ -187,25 +188,6 @@ String str_concat(Arena *a, String s1, String s2)
 	return res;
 }
 
-String str_concat_n(Arena *a, int count, ...)
-{
-	va_list args;
-	va_start(args, count);
-	char *buf = NULL;
-	u32 len = 0;
-	for (int i = 0; i < count; i++) {
-		String tmp = va_arg(args, String);
-		if (i == 0)
-			buf = arena_alloc(a, tmp.len);
-		else
-			arena_alloc(a, tmp.len);
-		memcpy(buf + len, tmp.buf, tmp.len);
-		len += tmp.len;
-	}
-	va_end(args);
-	return (String){.buf = buf, .len = len};
-}
-
 priv String str_fv(Arena *a, char *fmt, va_list src)
 {
 	String s;
@@ -213,7 +195,7 @@ priv String str_fv(Arena *a, char *fmt, va_list src)
 	va_copy(dest, src);
 	int size = vsnprintf(0, 0, fmt, src) + 1;
 	if (NEVER(size == -1))
-		return (String) {0};
+		return (va_end(dest), (String) {0});
 	u64 usize = (u64) size;
 	s.buf = arena_alloc(a, usize);
 	vsnprintf((char *)s.buf, usize, fmt, dest);
@@ -286,7 +268,7 @@ void strpush(StrList *l, String s)
 char *str_chr(String s, char c)
 {
 	for (int i = 0; i < s.len; i++)
-		if (s.buf[i] == c) return &s.buf[i];
+		if (s.buf[i] == c) return (s.buf + i); 
 	return NULL;
 }
 
